@@ -18,13 +18,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // On mount: validate stored token by calling /api/auth/me
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
+    if (!token) {
+      setIsLoading(false);
+      return;
     }
-    setIsLoading(false);
+
+    authAPI
+      .getMe()
+      .then((userData) => {
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+      })
+      .catch(() => {
+        // Token is invalid or expired – clear session
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
@@ -35,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       toast.success('Login successful!');
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Login failed';
+      const message = err.response?.data?.detail || 'Login failed';
       toast.error(message);
       throw err;
     }
@@ -49,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       toast.success('Registration successful!');
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Registration failed';
+      const message = err.response?.data?.detail || 'Registration failed';
       toast.error(message);
       throw err;
     }
@@ -83,3 +96,4 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
+
