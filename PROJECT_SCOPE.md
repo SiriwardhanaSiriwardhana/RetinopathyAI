@@ -17,8 +17,8 @@ The platform provides an integrated solution where healthcare professionals can 
 | Attribute        | Details                                                  |
 | ---------------- | -------------------------------------------------------- |
 | **Target Users** | Doctors, ophthalmologists, healthcare staff              |
-| **Tech Stack**   | Python, TensorFlow/PyTorch, FastAPI/Flask, React         |
-| **Database**     | MySQL / Firebase                                         |
+| **Tech Stack**   | Python, TensorFlow/PyTorch, FastAPI, React               |
+| **Database**     | Firebase Firestore                                       |
 | **Architecture** | AI Engine + Backend API + Frontend Interface             |
 | **Deployment**   | Cloud-based system                                       |
 
@@ -104,7 +104,7 @@ Backend API (FastAPI / Flask)
 AI Processing Engine
    │
    ▼
-Database (MySQL / Firebase)
+Database (Firebase Firestore)
 ```
 
 ---
@@ -132,9 +132,14 @@ Diagnosis Report Generation
 
 # 6. Database Schema
 
+> **Database:** Firebase Firestore (NoSQL document database)
+>
+> Collections in Firestore mirror the structure below.
+> Each collection stores documents with the listed fields.
+
 ```
 ┌─────────────┐
-│   Users     │
+│   Users     │  (Firestore collection: "users")
 │─────────────│
 │ id          │
 │ name        │
@@ -146,7 +151,7 @@ Diagnosis Report Generation
        │
        ▼
 ┌──────────────┐
-│   Patients   │
+│   Patients   │  (Firestore collection: "patients")
 │──────────────│
 │ id           │
 │ name         │
@@ -156,7 +161,7 @@ Diagnosis Report Generation
        │
        ▼
 ┌──────────────┐
-│ RetinalImage │
+│ RetinalImage │  (Firestore collection: "retinal_scans")
 │──────────────│
 │ imageId      │
 │ patientId    │
@@ -166,7 +171,7 @@ Diagnosis Report Generation
        │
        ▼
 ┌──────────────┐
-│ Diagnosis    │
+│ Diagnosis    │  (Firestore collection: "diagnoses")
 │──────────────│
 │ reportId     │
 │ drStage      │
@@ -223,7 +228,7 @@ Diagnosis Report Generation
 Estimated: 1–2 weeks
 
 * Setup development environment
-* Configure database
+* Configure Firebase Firestore database ✅
 * Implement authentication
 
 ---

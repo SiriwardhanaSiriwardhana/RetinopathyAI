@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     # ── Database ─────────────────────────────────────────
     DATABASE_URL: str = "sqlite:///./retinopathy.db"
 
+    # ── Firebase ─────────────────────────────────────────
+    FIREBASE_CREDENTIALS: str = "firebase-service-account.json"
+
     # ── JWT Auth ─────────────────────────────────────────
     SECRET_KEY: str = "change-me-in-production-use-a-strong-secret"
     ALGORITHM: str = "HS256"

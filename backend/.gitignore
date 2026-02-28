@@ -18,6 +18,11 @@ build/
 # Uploads
 uploads/
 
+# Firebase credentials (NEVER commit these)
+firebase-service-account.json
+google-services.json
+new-01-96a1d-firebase-adminsdk-*.json
+
 # IDE
 .vscode/
 .idea/
