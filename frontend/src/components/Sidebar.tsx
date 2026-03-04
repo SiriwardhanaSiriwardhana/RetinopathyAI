@@ -6,6 +6,7 @@ import {
   History,
   LogOut,
   Eye,
+  UserCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import '../styles/sidebar.css';
@@ -15,6 +16,7 @@ const navItems = [
   { path: '/patients', label: 'Patients', icon: Users },
   { path: '/scan/upload', label: 'Upload Scan', icon: Upload },
   { path: '/scan/history', label: 'Scan History', icon: History },
+  { path: '/profile', label: 'My Profile', icon: UserCircle },
 ];
 
 export default function Sidebar() {

@@ -10,6 +10,7 @@ import PatientDetailPage from './pages/PatientDetailPage';
 import ScanUploadPage from './pages/ScanUploadPage';
 import DiagnosisReportPage from './pages/DiagnosisReportPage';
 import ScanHistoryPage from './pages/ScanHistoryPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   const { isAuthenticated } = useAuth();
@@ -35,6 +36,7 @@ function App() {
           <Route path="/scan/upload" element={<ScanUploadPage />} />
           <Route path="/scan/history" element={<ScanHistoryPage />} />
           <Route path="/diagnosis/:id" element={<DiagnosisReportPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
       </Route>
 

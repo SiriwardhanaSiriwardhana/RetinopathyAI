@@ -4,6 +4,7 @@ export interface User {
   name: string;
   email: string;
   role: 'doctor' | 'admin' | 'staff';
+  created_at?: string;
 }
 
 export interface LoginCredentials {
