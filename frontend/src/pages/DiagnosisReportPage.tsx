@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   Download,
@@ -35,7 +35,29 @@ const mockDiagnosis: Diagnosis = {
 export default function DiagnosisReportPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [diagnosis] = useState<Diagnosis>(mockDiagnosis);
+  const location = useLocation();
+  const { prediction, scan } = location.state || {};
+
+  const [diagnosis] = useState<Diagnosis>(() => {
+    if (prediction) {
+      // Map backend stage string back to frontend type if needed
+      let stage = prediction.dr_stage;
+      if (stage.includes('Mild')) stage = 'Mild';
+      else if (stage.includes('Moderate')) stage = 'Moderate';
+      else if (stage.includes('Severe')) stage = 'Severe';
+      else if (stage.includes('Proliferative')) stage = 'Proliferative DR';
+      else stage = 'No DR';
+
+      return {
+        ...mockDiagnosis,
+        drStage: stage as any,
+        confidence: prediction.confidence,
+        imageId: scan?.id || 1,
+        createdDate: new Date().toISOString().split('T')[0],
+      };
+    }
+    return mockDiagnosis;
+  });
 
   const getSeverityInfo = (stage: string) => {
     const info: Record<string, { color: string; bgColor: string; level: string; icon: any }> = {

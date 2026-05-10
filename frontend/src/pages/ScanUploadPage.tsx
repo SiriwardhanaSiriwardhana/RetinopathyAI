@@ -1,29 +1,35 @@
-import { useState, useRef, type ChangeEvent, type DragEvent } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent, type DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, ImageIcon, X, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { scansAPI, predictionAPI, patientsAPI } from '../api';
 import type { Patient } from '../types';
 import '../styles/scan-upload.css';
-
-// Mock patients for dropdown
-const mockPatients: Patient[] = [
-  { id: 1, name: 'Sarah Johnson', age: 54, gender: 'Female', diabetesType: 'Type 2', phone: '', email: '', createdAt: '' },
-  { id: 2, name: 'James Wilson', age: 67, gender: 'Male', diabetesType: 'Type 1', phone: '', email: '', createdAt: '' },
-  { id: 3, name: 'Maria Garcia', age: 45, gender: 'Female', diabetesType: 'Type 2', phone: '', email: '', createdAt: '' },
-  { id: 4, name: 'Robert Brown', age: 72, gender: 'Male', diabetesType: 'Type 2', phone: '', email: '', createdAt: '' },
-  { id: 5, name: 'Emily Chen', age: 38, gender: 'Female', diabetesType: 'Type 1', phone: '', email: '', createdAt: '' },
-];
 
 type UploadState = 'idle' | 'selected' | 'uploading' | 'analyzing' | 'done' | 'error';
 
 export default function ScanUploadPage() {
-  const [selectedPatient, setSelectedPatient] = useState<number | ''>('');
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<string | ''>('');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        const data = await patientsAPI.getAll();
+        setPatients(data);
+      } catch (err) {
+        console.error('Failed to fetch patients:', err);
+        toast.error('Failed to load patients');
+      }
+    };
+    fetchPatients();
+  }, []);
 
   const handleFileSelect = (f: File) => {
     if (!f.type.startsWith('image/')) {
@@ -71,17 +77,18 @@ export default function ScanUploadPage() {
 
     try {
       setUploadState('uploading');
+      
+      const scan = await scansAPI.upload(selectedPatient, file);
 
-      // Simulate upload delay (replace with scansAPI.upload)
-      await new Promise((res) => setTimeout(res, 1500));
       setUploadState('analyzing');
+      const prediction = await predictionAPI.predict(scan.imageId || scan.id);
 
-      // Simulate AI analysis delay (replace with predictionAPI.predict)
-      await new Promise((res) => setTimeout(res, 2500));
       setUploadState('done');
-
       toast.success('Scan analyzed successfully!');
-    } catch {
+
+      navigate(`/diagnosis/${scan.imageId || scan.id}`, { state: { prediction, scan } });
+    } catch (err: any) {
+      console.error(err);
       setUploadState('error');
       toast.error('Analysis failed. Please try again.');
     }
@@ -104,13 +111,13 @@ export default function ScanUploadPage() {
             <label>Select Patient</label>
             <select
               value={selectedPatient}
-              onChange={(e) => setSelectedPatient(Number(e.target.value))}
+              onChange={(e) => setSelectedPatient(e.target.value)}
               className="patient-select"
             >
               <option value="">-- Choose a patient --</option>
-              {mockPatients.map((p) => (
+              {patients.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} ({p.age}y, {p.diabetesType})
+                  {p.name} ({p.age}y, {p.diabetesType || p.gender})
                 </option>
               ))}
             </select>
@@ -233,12 +240,6 @@ export default function ScanUploadPage() {
               <CheckCircle size={32} className="success-icon" />
               <h3>Analysis Complete!</h3>
               <p>The retinal scan has been analyzed successfully.</p>
-              <button
-                className="btn btn-primary btn-full"
-                onClick={() => navigate('/diagnosis/1')}
-              >
-                View Diagnosis Report
-              </button>
             </div>
           )}
         </div>

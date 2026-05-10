@@ -14,12 +14,12 @@ class PatientCreate(BaseModel):
 
 
 class PatientOut(BaseModel):
-    id: int
+    id: str
     name: str
     age: int
     gender: str | None = None
     diabetes_type: str | None = None
-    doctor_id: int
+    doctor_id: str
     created_at: datetime | None = None
 
     model_config = {"from_attributes": True}

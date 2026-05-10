@@ -21,7 +21,7 @@ class UserLogin(BaseModel):
 
 # ── Response schemas ─────────────────────────────────────
 class UserOut(BaseModel):
-    id: int
+    id: str
     name: str
     email: str
     role: str

@@ -1,14 +1,14 @@
 """
-Patient management routes – CRUD operations for patients.
+Patient management routes — CRUD operations for patients (Firestore).
 """
 
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from google.cloud import firestore
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.user import User
-from app.models.patient import Patient
+from app.schemas.user import UserOut
 from app.schemas.patient import PatientCreate, PatientOut
 
 router = APIRouter(prefix="/api/patients", tags=["Patients"])
@@ -16,39 +16,51 @@ router = APIRouter(prefix="/api/patients", tags=["Patients"])
 
 @router.get("/", response_model=list[PatientOut])
 def get_patients(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: firestore.Client = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
 ):
     """List all patients belonging to the current doctor."""
-    return db.query(Patient).filter(Patient.doctor_id == current_user.id).all()
+    docs = db.collection("patients").where("doctor_id", "==", current_user.id).stream()
+    
+    patients = []
+    for doc in docs:
+        data = doc.to_dict()
+        patients.append(PatientOut(id=doc.id, **data))
+    return patients
 
 
 @router.post("/", response_model=PatientOut, status_code=status.HTTP_201_CREATED)
 def create_patient(
     payload: PatientCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: firestore.Client = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
 ):
     """Add a new patient record."""
-    patient = Patient(**payload.model_dump(), doctor_id=current_user.id)
-    db.add(patient)
-    db.commit()
-    db.refresh(patient)
-    return patient
+    doc_ref = db.collection("patients").document()
+    
+    patient_data = payload.model_dump()
+    patient_data["doctor_id"] = current_user.id
+    patient_data["created_at"] = datetime.now(timezone.utc)
+    
+    doc_ref.set(patient_data)
+    
+    return PatientOut(id=doc_ref.id, **patient_data)
 
 
 @router.get("/{patient_id}", response_model=PatientOut)
 def get_patient(
-    patient_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    patient_id: str,
+    db: firestore.Client = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
 ):
     """Get a single patient by ID."""
-    patient = (
-        db.query(Patient)
-        .filter(Patient.id == patient_id, Patient.doctor_id == current_user.id)
-        .first()
-    )
-    if not patient:
+    doc = db.collection("patients").document(patient_id).get()
+    
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Patient not found")
-    return patient
+        
+    data = doc.to_dict()
+    if data.get("doctor_id") != current_user.id:
+        raise HTTPException(status_code=404, detail="Patient not found")
+        
+    return PatientOut(id=doc.id, **data)

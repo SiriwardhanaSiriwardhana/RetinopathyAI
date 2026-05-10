@@ -1,19 +1,16 @@
 """
-FastAPI application factory – Retinopathy AI Backend.
+FastAPI application factory — Retinopathy AI Backend.
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.database import engine, Base
-
-# Import all models so SQLAlchemy knows about them before create_all
-from app.models import user, patient, scan  # noqa: F401
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.patients import router as patients_router
 from app.api.routes.scans import router as scans_router, predict_router
+from app.api.routes.dashboard import router as dashboard_router
 
 
 def create_app() -> FastAPI:
@@ -24,7 +21,7 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
-    # ── CORS ─────────────────────────────────────────────
+    # ✨ CORS ✨
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
@@ -33,16 +30,14 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Create tables ────────────────────────────────────
-    Base.metadata.create_all(bind=engine)
-
-    # ── Register routers ─────────────────────────────────
+    # ✨ Register routers ✨
     app.include_router(auth_router)
     app.include_router(patients_router)
     app.include_router(scans_router)
     app.include_router(predict_router)
+    app.include_router(dashboard_router)
 
-    # ── Health check ─────────────────────────────────────
+    # ✨ Health check ✨
     @app.get("/", tags=["Health"])
     def health_check():
         return {

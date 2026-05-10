@@ -1,6 +1,6 @@
 // User types
 export interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: 'doctor' | 'admin' | 'staff';
@@ -21,7 +21,7 @@ export interface RegisterData {
 
 // Patient types
 export interface Patient {
-  id: number;
+  id: string;
   name: string;
   age: number;
   gender: string;
@@ -42,8 +42,9 @@ export interface PatientFormData {
 
 // Scan types
 export interface RetinalScan {
-  imageId: number;
-  patientId: number;
+  id: string;
+  imageId: string;
+  patientId: string;
   patientName: string;
   imagePath: string;
   uploadDate: string;
@@ -54,9 +55,11 @@ export interface RetinalScan {
 export type DRStage = 'No DR' | 'Mild' | 'Moderate' | 'Severe' | 'Proliferative DR';
 
 export interface Diagnosis {
-  reportId: number;
-  imageId: number;
-  patientId: number;
+  id: string;
+  reportId: string;
+  imageId: string;
+  scan_id: string;
+  patientId: string;
   patientName: string;
   drStage: DRStage;
   confidence: number;

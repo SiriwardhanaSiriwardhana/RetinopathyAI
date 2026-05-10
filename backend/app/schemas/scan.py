@@ -7,8 +7,8 @@ from datetime import datetime
 
 
 class ScanOut(BaseModel):
-    id: int
-    patient_id: int
+    id: str
+    patient_id: str
     image_path: str
     upload_date: datetime | None = None
 
@@ -16,8 +16,8 @@ class ScanOut(BaseModel):
 
 
 class DiagnosisOut(BaseModel):
-    id: int
-    scan_id: int
+    id: str
+    scan_id: str
     dr_stage: str
     confidence: float
     details: str | None = None
@@ -27,7 +27,7 @@ class DiagnosisOut(BaseModel):
 
 
 class PredictionResult(BaseModel):
-    scan_id: int
+    scan_id: str
     dr_stage: str
     confidence: float
     details: str | None = None

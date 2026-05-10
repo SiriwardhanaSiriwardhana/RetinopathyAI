@@ -1,5 +1,5 @@
 """
-Security utilities – password hashing and JWT token management.
+Security utilities — password hashing and JWT token management.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -8,12 +8,13 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
+from google.cloud import firestore
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.schemas.user import UserOut
 
-# ── Password hashing ────────────────────────────────────
+# ✨ Password hashing ✨
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -27,7 +28,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-# ── JWT tokens ───────────────────────────────────────────
+# ✨ JWT tokens ✨
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (
@@ -39,11 +40,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
+    db: firestore.Client = Depends(get_db),
 ):
     """Dependency that extracts and validates the current user from a JWT."""
-    from app.models.user import User  # late import to avoid circular dependency
-
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -53,13 +52,16 @@ def get_current_user(
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
-        user_id: int | None = payload.get("sub")
+        user_id: str | None = payload.get("sub")
         if user_id is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
-    if user is None:
+    user_doc = db.collection("users").document(str(user_id)).get()
+    if not user_doc.exists:
         raise credentials_exception
-    return user
+        
+    user_data = user_doc.to_dict()
+    user_data["id"] = user_doc.id
+    return UserOut(**user_data)

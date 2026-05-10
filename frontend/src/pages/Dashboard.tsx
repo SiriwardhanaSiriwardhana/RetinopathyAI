@@ -21,74 +21,11 @@ import {
   Cell,
   Legend,
 } from 'recharts';
+import { dashboardAPI } from '../api';
 import type { DashboardStats } from '../types';
 import '../styles/dashboard.css';
 
 // Mock data for demonstration (will be replaced by API calls)
-const mockStats: DashboardStats = {
-  totalPatients: 1247,
-  totalScans: 3892,
-  scansToday: 24,
-  criticalCases: 18,
-  drDistribution: [
-    { stage: 'No DR', count: 1850 },
-    { stage: 'Mild', count: 920 },
-    { stage: 'Moderate', count: 680 },
-    { stage: 'Severe', count: 312 },
-    { stage: 'Proliferative', count: 130 },
-  ],
-  recentScans: [
-    {
-      imageId: 1,
-      patientId: 101,
-      patientName: 'Sarah Johnson',
-      imagePath: '/scans/scan1.jpg',
-      uploadDate: '2026-02-27T10:30:00',
-      status: 'analyzed',
-    },
-    {
-      imageId: 2,
-      patientId: 102,
-      patientName: 'James Wilson',
-      imagePath: '/scans/scan2.jpg',
-      uploadDate: '2026-02-27T09:15:00',
-      status: 'analyzed',
-    },
-    {
-      imageId: 3,
-      patientId: 103,
-      patientName: 'Maria Garcia',
-      imagePath: '/scans/scan3.jpg',
-      uploadDate: '2026-02-27T08:45:00',
-      status: 'pending',
-    },
-    {
-      imageId: 4,
-      patientId: 104,
-      patientName: 'Robert Brown',
-      imagePath: '/scans/scan4.jpg',
-      uploadDate: '2026-02-26T16:20:00',
-      status: 'analyzed',
-    },
-    {
-      imageId: 5,
-      patientId: 105,
-      patientName: 'Emily Chen',
-      imagePath: '/scans/scan5.jpg',
-      uploadDate: '2026-02-26T14:00:00',
-      status: 'analyzed',
-    },
-  ],
-  monthlyScans: [
-    { month: 'Sep', count: 280 },
-    { month: 'Oct', count: 350 },
-    { month: 'Nov', count: 320 },
-    { month: 'Dec', count: 410 },
-    { month: 'Jan', count: 390 },
-    { month: 'Feb', count: 380 },
-  ],
-};
-
 const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export default function Dashboard() {
