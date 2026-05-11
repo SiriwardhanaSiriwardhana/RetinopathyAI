@@ -165,3 +165,14 @@ def get_diagnosis(
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Diagnosis not found")
     return DiagnosisOut(id=doc.id, **doc.to_dict())
+
+@predict_router.get("/diagnosis/scan/{scan_id}", response_model=DiagnosisOut)
+def get_diagnosis_by_scan(
+    scan_id: str,
+    db: firestore.Client = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
+):
+    docs = list(db.collection("diagnoses").where("scan_id", "==", scan_id).limit(1).stream())
+    if not docs:
+        raise HTTPException(status_code=404, detail="Diagnosis not found")
+    return DiagnosisOut(id=docs[0].id, **docs[0].to_dict())

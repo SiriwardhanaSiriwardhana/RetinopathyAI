@@ -64,3 +64,37 @@ def get_patient(
         raise HTTPException(status_code=404, detail="Patient not found")
         
     return PatientOut(id=doc.id, **data)
+
+@router.put("/{patient_id}", response_model=PatientOut)
+def update_patient(
+    patient_id: str,
+    payload: PatientCreate,
+    db: firestore.Client = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
+):
+    """Update a patient record."""
+    doc_ref = db.collection("patients").document(patient_id)
+    doc = doc_ref.get()
+    if not doc.exists or doc.to_dict().get("doctor_id") != current_user.id:
+        raise HTTPException(status_code=404, detail="Patient not found")
+        
+    update_data = payload.model_dump(exclude_unset=True)
+    doc_ref.update(update_data)
+    
+    updated_doc = doc_ref.get().to_dict()
+    return PatientOut(id=patient_id, **updated_doc)
+
+@router.delete("/{patient_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_patient(
+    patient_id: str,
+    db: firestore.Client = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
+):
+    """Delete a patient record."""
+    doc_ref = db.collection("patients").document(patient_id)
+    doc = doc_ref.get()
+    if not doc.exists or doc.to_dict().get("doctor_id") != current_user.id:
+        raise HTTPException(status_code=404, detail="Patient not found")
+        
+    doc_ref.delete()
+    return None

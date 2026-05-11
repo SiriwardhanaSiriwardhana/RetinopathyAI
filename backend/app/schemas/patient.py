@@ -11,6 +11,8 @@ class PatientCreate(BaseModel):
     age: int
     gender: str | None = None
     diabetes_type: str | None = None
+    phone: str | None = None
+    email: str | None = None
 
 
 class PatientOut(BaseModel):
@@ -19,6 +21,8 @@ class PatientOut(BaseModel):
     age: int
     gender: str | None = None
     diabetes_type: str | None = None
+    phone: str | None = None
+    email: str | None = None
     doctor_id: str
     created_at: datetime | None = None
 

@@ -13,70 +13,21 @@ import type { Patient, RetinalScan, Diagnosis } from '../types';
 import '../styles/patient-detail.css';
 
 // Mock data
-const mockPatient: Patient = {
-  id: 1,
-  name: 'Sarah Johnson',
-  age: 54,
-  gender: 'Female',
-  diabetesType: 'Type 2',
-  phone: '+1 (555) 123-4567',
-  email: 'sarah.j@email.com',
-  createdAt: '2025-10-15',
-};
-
-const mockScans: RetinalScan[] = [
-  {
-    imageId: 1,
-    patientId: 1,
-    patientName: 'Sarah Johnson',
-    imagePath: '/scans/scan1.jpg',
-    uploadDate: '2026-02-27T10:30:00',
-    status: 'analyzed',
-  },
-  {
-    imageId: 6,
-    patientId: 1,
-    patientName: 'Sarah Johnson',
-    imagePath: '/scans/scan6.jpg',
-    uploadDate: '2026-01-15T11:00:00',
-    status: 'analyzed',
-  },
-];
-
-const mockDiagnoses: Diagnosis[] = [
-  {
-    reportId: 1,
-    imageId: 1,
-    patientId: 1,
-    patientName: 'Sarah Johnson',
-    drStage: 'Moderate',
-    confidence: 0.89,
-    findings: ['Microaneurysms detected', 'Hard exudates present'],
-    recommendations: 'Follow-up examination in 3 months. Consider laser treatment.',
-    createdDate: '2026-02-27',
-  },
-  {
-    reportId: 2,
-    imageId: 6,
-    patientId: 1,
-    patientName: 'Sarah Johnson',
-    drStage: 'Mild',
-    confidence: 0.92,
-    findings: ['Minor microaneurysms'],
-    recommendations: 'Routine follow-up in 6 months.',
-    createdDate: '2026-01-15',
-  },
-];
-
 export default function PatientDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'scans' | 'diagnoses'>('scans');
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [scans, setScans] = useState<RetinalScan[]>([]);
+  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
 
-  // Replace with API call: patientsAPI.getById(Number(id))
-  const patient = mockPatient;
-  const scans = mockScans;
-  const diagnoses = mockDiagnoses;
+  useEffect(() => {
+    if (id) {
+      patientsAPI.getById(id).then(setPatient).catch(console.error);
+    }
+  }, [id]);
+
+  if (!patient) return <div className="patient-detail">Loading...</div>;
 
   const getSeverityColor = (stage: string) => {
     const colors: Record<string, string> = {

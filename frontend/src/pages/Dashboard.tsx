@@ -29,13 +29,20 @@ import '../styles/dashboard.css';
 const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<DashboardStats>(mockStats);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Uncomment when backend is ready:
-  // useEffect(() => {
-  //   dashboardAPI.getStats().then(setStats).catch(console.error);
-  // }, []);
+  useEffect(() => {
+    dashboardAPI.getStats()
+      .then(setStats)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !stats) {
+    return <div className="dashboard"><h2>Loading dashboard...</h2></div>;
+  }
 
   const statCards = [
     {

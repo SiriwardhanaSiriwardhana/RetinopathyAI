@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { predictionAPI, scansAPI } from '../api';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -38,26 +39,41 @@ export default function DiagnosisReportPage() {
   const location = useLocation();
   const { prediction, scan } = location.state || {};
 
-  const [diagnosis] = useState<Diagnosis>(() => {
-    if (prediction) {
-      // Map backend stage string back to frontend type if needed
-      let stage = prediction.dr_stage;
-      if (stage.includes('Mild')) stage = 'Mild';
-      else if (stage.includes('Moderate')) stage = 'Moderate';
-      else if (stage.includes('Severe')) stage = 'Severe';
-      else if (stage.includes('Proliferative')) stage = 'Proliferative DR';
-      else stage = 'No DR';
+  const [diagnosis, setDiagnosis] = useState<any>(null);
+  const [actualScan, setActualScan] = useState<any>(scan);
 
-      return {
-        ...mockDiagnosis,
-        drStage: stage as any,
-        confidence: prediction.confidence,
-        imageId: scan?.id || 1,
-        createdDate: new Date().toISOString().split('T')[0],
-      };
+  useEffect(() => {
+    if (id) {
+      predictionAPI.getDiagnosisByScanId(id)
+        .then((data) => {
+          let stage = data.dr_stage || '';
+          if (stage.includes('Mild')) stage = 'Mild';
+          else if (stage.includes('Moderate')) stage = 'Moderate';
+          else if (stage.includes('Severe')) stage = 'Severe';
+          else if (stage.includes('Proliferative')) stage = 'Proliferative DR';
+          else stage = 'No DR';
+
+          setDiagnosis({
+            reportId: data.id,
+            imageId: id,
+            patientId: data.patient_id || 1,
+            patientName: 'Patient',
+            drStage: stage,
+            confidence: data.confidence,
+            findings: data.details ? data.details.split('\n') : [],
+            recommendations: 'Follow up according to clinical guidelines.',
+            createdDate: data.created_at || new Date().toISOString().split('T')[0]
+          });
+        })
+        .catch(console.error);
+        
+      if (!actualScan) {
+        scansAPI.getById(id).then(setActualScan).catch(console.error);
+      }
     }
-    return mockDiagnosis;
-  });
+  }, [id, actualScan]);
+
+  if (!diagnosis) return <div className="diagnosis-report">Loading report...</div>;
 
   const getSeverityInfo = (stage: string) => {
     const info: Record<string, { color: string; bgColor: string; level: string; icon: any }> = {
@@ -73,6 +89,50 @@ export default function DiagnosisReportPage() {
   const severity = getSeverityInfo(diagnosis.drStage);
   const SeverityIcon = severity.icon;
 
+  const handleDownloadPDF = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/api/reports/${id}/pdf`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to generate PDF');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Diagnostic_Report_${diagnosis.reportId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to download PDF report.');
+    }
+  };
+
+  const handleViewPDF = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/api/reports/${id}/pdf`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to generate PDF');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to view PDF report.');
+    }
+  };
+
   return (
     <div className="diagnosis-report">
       <div className="report-top-bar">
@@ -81,11 +141,11 @@ export default function DiagnosisReportPage() {
           Back
         </button>
         <div className="report-actions">
-          <button className="btn btn-outline" onClick={() => window.print()}>
-            <Printer size={18} />
-            Print
+          <button className="btn btn-outline" onClick={handleViewPDF}>
+            <Eye size={18} />
+            View PDF
           </button>
-          <button className="btn btn-primary">
+          <button className="btn btn-primary" onClick={handleDownloadPDF}>
             <Download size={18} />
             Download PDF
           </button>
@@ -167,11 +227,19 @@ export default function DiagnosisReportPage() {
 
           <div className="report-card scan-image-card">
             <h3>Retinal Scan</h3>
-            <div className="scan-image-placeholder">
-              <Eye size={48} />
-              <p>Retinal fundus image</p>
-              <span className="text-muted">Heatmap overlay will appear here</span>
-            </div>
+            {actualScan?.imagePath ? (
+              <img 
+                src={`http://localhost:8000/uploads/${actualScan.imagePath.split(/[/\\\\]/).pop()}`} 
+                alt="Retinal Scan" 
+                style={{ width: '100%', borderRadius: '8px', border: '1px solid #e5e7eb' }} 
+              />
+            ) : (
+              <div className="scan-image-placeholder">
+                <Eye size={48} />
+                <p>Retinal fundus image</p>
+                <span className="text-muted">Heatmap overlay will appear here</span>
+              </div>
+            )}
           </div>
         </div>
 

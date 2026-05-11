@@ -58,25 +58,45 @@ export const authAPI = {
 };
 
 // ─── Patients ────────────────────────────────────────────
+const mapPatient = (data: any): Patient => ({
+  id: data.id,
+  name: data.name,
+  age: data.age,
+  gender: data.gender,
+  diabetesType: data.diabetes_type,
+  phone: data.phone,
+  email: data.email,
+  createdAt: data.created_at,
+});
+
+const mapPatientToBackend = (p: any) => ({
+  name: p.name,
+  age: p.age,
+  gender: p.gender,
+  diabetes_type: p.diabetesType,
+  phone: p.phone,
+  email: p.email,
+});
+
 export const patientsAPI = {
   getAll: async () => {
-    const { data } = await api.get<Patient[]>('/patients/');
-    return data;
+    const { data } = await api.get<any[]>('/patients/');
+    return data.map(mapPatient);
   },
 
   getById: async (id: string) => {
-    const { data } = await api.get<Patient>(`/patients/${id}`);
-    return data;
+    const { data } = await api.get<any>(`/patients/${id}`);
+    return mapPatient(data);
   },
 
   create: async (patient: PatientFormData) => {
-    const { data } = await api.post<Patient>('/patients/', patient);
-    return data;
+    const { data } = await api.post<any>('/patients/', mapPatientToBackend(patient));
+    return mapPatient(data);
   },
 
   update: async (id: string, patient: Partial<PatientFormData>) => {
-    const { data } = await api.put<Patient>(`/patients/${id}`, patient);
-    return data;
+    const { data } = await api.put<any>(`/patients/${id}`, mapPatientToBackend(patient));
+    return mapPatient(data);
   },
 
   delete: async (id: string) => {
@@ -95,13 +115,18 @@ export const scansAPI = {
     return data;
   },
 
-  getById: async (id: number) => {
-    const { data } = await api.get<RetinalScan>(`/scans/${id}`);
-    return data;
+  getById: async (id: string) => {
+    const { data } = await api.get<any>(`/scans/${id}`);
+    return {
+      ...data,
+      imagePath: data.image_path || data.imagePath,
+      uploadDate: data.upload_date || data.uploadDate,
+      patientId: data.patient_id || data.patientId,
+    };
   },
 
   getAll: async () => {
-    const { data } = await api.get<RetinalScan[]>('/scans');
+    const { data } = await api.get<RetinalScan[]>('/scans/');
     return data;
   },
 
@@ -123,6 +148,11 @@ export const predictionAPI = {
     return data;
   },
 
+  getDiagnosisByScanId: async (scanId: string) => {
+    const { data } = await api.get<any>(`/diagnosis/scan/${scanId}`);
+    return data;
+  },
+
   getByPatient: async (patientId: number) => {
     const { data } = await api.get<Diagnosis[]>(`/diagnosis?patientId=${patientId}`);
     return data;
@@ -138,11 +168,3 @@ export const dashboardAPI = {
 };
 
 export default api;
-
-// ─── Dashboard ─────────────────────────────────────────────
-export const dashboardAPI = {
-  getStats: async () => {
-    const { data } = await api.get<DashboardStats>('/dashboard/stats');
-    return data;
-  },
-};

@@ -4,62 +4,11 @@ import { UserPlus, Search, Edit, Trash2, Eye } from 'lucide-react';
 import type { Patient, PatientFormData } from '../types';
 import '../styles/patients.css';
 
-// Mock data – replace with patientsAPI calls
-const mockPatients: Patient[] = [
-  {
-    id: 1,
-    name: 'Sarah Johnson',
-    age: 54,
-    gender: 'Female',
-    diabetesType: 'Type 2',
-    phone: '+1 (555) 123-4567',
-    email: 'sarah.j@email.com',
-    createdAt: '2025-10-15',
-  },
-  {
-    id: 2,
-    name: 'James Wilson',
-    age: 67,
-    gender: 'Male',
-    diabetesType: 'Type 1',
-    phone: '+1 (555) 987-6543',
-    email: 'james.w@email.com',
-    createdAt: '2025-11-20',
-  },
-  {
-    id: 3,
-    name: 'Maria Garcia',
-    age: 45,
-    gender: 'Female',
-    diabetesType: 'Type 2',
-    phone: '+1 (555) 456-7890',
-    email: 'maria.g@email.com',
-    createdAt: '2025-12-05',
-  },
-  {
-    id: 4,
-    name: 'Robert Brown',
-    age: 72,
-    gender: 'Male',
-    diabetesType: 'Type 2',
-    phone: '+1 (555) 321-6549',
-    email: 'robert.b@email.com',
-    createdAt: '2026-01-10',
-  },
-  {
-    id: 5,
-    name: 'Emily Chen',
-    age: 38,
-    gender: 'Female',
-    diabetesType: 'Type 1',
-    phone: '+1 (555) 654-3210',
-    email: 'emily.c@email.com',
-    createdAt: '2026-02-01',
-  },
-];
+import { patientsAPI } from '../api';
 
+// Mock data – replace with patientsAPI calls
 export default function PatientsPage() {
-  const [patients, setPatients] = useState<Patient[]>(mockPatients);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState<PatientFormData>({
@@ -72,27 +21,36 @@ export default function PatientsPage() {
   });
   const navigate = useNavigate();
 
+  useEffect(() => {
+    patientsAPI.getAll().then(setPatients).catch(console.error);
+  }, []);
+
   const filtered = patients.filter(
     (p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const newPatient: Patient = {
-      ...formData,
-      id: patients.length + 1,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setPatients([newPatient, ...patients]);
-    setShowModal(false);
-    setFormData({ name: '', age: 0, gender: 'Male', diabetesType: 'Type 2', phone: '', email: '' });
+    try {
+      const newPatient = await patientsAPI.create(formData);
+      setPatients([newPatient, ...patients]);
+      setShowModal(false);
+      setFormData({ name: '', age: 0, gender: 'Male', diabetesType: 'Type 2', phone: '', email: '' });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to remove this patient?')) {
-      setPatients(patients.filter((p) => p.id !== id));
+      try {
+        await patientsAPI.delete(id);
+        setPatients(patients.filter((p) => p.id !== id));
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -167,7 +125,7 @@ export default function PatientsPage() {
                   <button
                     className="icon-btn icon-btn-danger"
                     title="Delete"
-                    onClick={() => handleDelete(patient.id)}
+                    onClick={() => handleDelete(patient.id as string)}
                   >
                     <Trash2 size={16} />
                   </button>
