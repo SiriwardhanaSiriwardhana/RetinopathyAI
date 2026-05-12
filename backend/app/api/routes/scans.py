@@ -16,6 +16,7 @@ from app.core.security import get_current_user
 from app.schemas.user import UserOut
 from app.schemas.scan import ScanOut, DiagnosisOut, PredictionResult
 from app.services.ml_service import ml_service
+from app.services.openai_service import get_clinical_recommendation
 
 router = APIRouter(prefix="/api/scans", tags=["Scans"])
 
@@ -52,6 +53,32 @@ def get_scans(
                 "uploadDate": data.get("upload_date", ""),
                 "status": data.get("status", "analyzed")
             })
+    return scans
+
+
+@router.get("/by-patient/{patient_id}", response_model=list[dict])
+def get_scans_by_patient(
+    patient_id: str,
+    db: firestore.Client = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
+):
+    """Retrieve all scans for a specific patient."""
+    patient_doc = db.collection("patients").document(patient_id).get()
+    if not patient_doc.exists or patient_doc.to_dict().get("doctor_id") != current_user.id:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    scans = []
+    scans_ref = db.collection("scans").where("patient_id", "==", patient_id).stream()
+    for doc in scans_ref:
+        data = doc.to_dict()
+        scans.append({
+            "id": doc.id,
+            "imageId": doc.id,
+            "patientId": patient_id,
+            "imagePath": data.get("image_path", ""),
+            "uploadDate": data.get("upload_date", ""),
+            "status": data.get("status", "pending"),
+        })
     return scans
 
 @router.post("/upload", response_model=ScanOut, status_code=status.HTTP_201_CREATED)
@@ -136,6 +163,9 @@ def run_prediction(
     # Update scan status
     scan_ref.update({"status": "analyzed"})
 
+    # Get AI clinical recommendation (OpenAI GPT)
+    ai_recommendation = get_clinical_recommendation(dr_stage, confidence, details)
+
     # Persist result
     diag_ref = db.collection("diagnoses").document()
     diag_data = {
@@ -144,6 +174,7 @@ def run_prediction(
         "dr_stage": dr_stage,
         "confidence": confidence,
         "details": details,
+        "ai_recommendation": ai_recommendation,
         "created_at": datetime.now(timezone.utc)
     }
     diag_ref.set(diag_data)

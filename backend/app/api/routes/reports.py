@@ -104,6 +104,17 @@ async def generate_pdf_report(
         date_str = str(created_at)
 
     template = env.get_template("report_template.html")
+
+    # Fetch prescription if it exists
+    prescription = None
+    presc_docs = list(db.collection("prescriptions").where("scan_id", "==", scan_id).limit(1).stream())
+    if presc_docs:
+        presc_data = presc_docs[0].to_dict()
+        prescription = {
+            "doctor_notes": presc_data.get("doctor_notes", ""),
+            "medicines": presc_data.get("medicines", []),
+        }
+
     html_content = template.render(
         report_id=report_id,
         date=date_str,
@@ -116,7 +127,8 @@ async def generate_pdf_report(
         severity_bg=colors["bg"],
         severity_color=colors["text"],
         details=diag_data.get("details", "No details available."),
-        image_url=image_url
+        image_url=image_url,
+        prescription=prescription,
     )
 
     try:

@@ -17,6 +17,7 @@ from app.api.routes.patients import router as patients_router
 from app.api.routes.scans import router as scans_router, predict_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.reports import router as reports_router
+from app.api.routes.prescriptions import router as prescriptions_router
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     app.include_router(predict_router)
     app.include_router(dashboard_router)
     app.include_router(reports_router)
+    app.include_router(prescriptions_router)
 
     # ✨ Mount static files ✨
     upload_path = Path(settings.UPLOAD_DIR)

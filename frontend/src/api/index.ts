@@ -134,6 +134,11 @@ export const scansAPI = {
     const { data } = await api.get<RetinalScan[]>(`/scans?patientId=${patientId}`);
     return data;
   },
+
+  getByPatientId: async (patientId: string) => {
+    const { data } = await api.get<any[]>(`/scans/by-patient/${patientId}`);
+    return data;
+  },
 };
 
 // ─── AI Prediction ───────────────────────────────────────
@@ -155,6 +160,29 @@ export const predictionAPI = {
 
   getByPatient: async (patientId: number) => {
     const { data } = await api.get<Diagnosis[]>(`/diagnosis?patientId=${patientId}`);
+    return data;
+  },
+};
+
+// ─── Prescriptions ───────────────────────────────────────
+export const prescriptionsAPI = {
+  create: async (payload: {
+    scan_id: string;
+    diagnosis_id: string;
+    doctor_notes: string;
+    medicines: Array<{ name: string; dosage: string; frequency: string; duration: string; notes: string }>;
+  }) => {
+    const { data } = await api.post<any>('/prescriptions/', payload);
+    return data;
+  },
+
+  getByDiagnosis: async (diagnosisId: string) => {
+    const { data } = await api.get<any>(`/prescriptions/${diagnosisId}`);
+    return data;
+  },
+
+  getAiSuggestion: async (scanId: string) => {
+    const { data } = await api.get<any>(`/prescriptions/ai-suggestion/${scanId}`);
     return data;
   },
 };

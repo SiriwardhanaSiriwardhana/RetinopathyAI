@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { patientsAPI } from '../api';
+import { patientsAPI, scansAPI } from '../api';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -24,6 +24,18 @@ export default function PatientDetailPage() {
   useEffect(() => {
     if (id) {
       patientsAPI.getById(id).then(setPatient).catch(console.error);
+      scansAPI.getByPatientId(id).then((data) => {
+        // Normalize field names
+        const normalized = data.map((s: any) => ({
+          ...s,
+          imageId: s.imageId || s.id,
+          imagePath: s.imagePath || s.image_path || '',
+          uploadDate: s.uploadDate || s.upload_date || '',
+          patientId: s.patientId || s.patient_id || id,
+          status: s.status || 'pending',
+        }));
+        setScans(normalized);
+      }).catch(console.error);
     }
   }, [id]);
 
@@ -116,8 +128,29 @@ export default function PatientDetailPage() {
             <tbody>
               {scans.map((scan) => (
                 <tr key={scan.imageId}>
-                  <td>#{scan.imageId.toString().padStart(4, '0')}</td>
-                  <td>{new Date(scan.uploadDate).toLocaleDateString()}</td>
+                  <td>#{scan.imageId.toString().slice(0, 8)}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Clock size={14} style={{ color: '#6b7280' }} />
+                      {scan.uploadDate ? (
+                        <span>
+                          {new Date(scan.uploadDate).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                          <span style={{ color: '#9ca3af', marginLeft: 8, fontSize: '0.85em' }}>
+                            {new Date(scan.uploadDate).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </div>
+                  </td>
                   <td>
                     <span
                       className={`badge ${
