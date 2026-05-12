@@ -180,11 +180,6 @@ export const prescriptionsAPI = {
     const { data } = await api.get<any>(`/prescriptions/${diagnosisId}`);
     return data;
   },
-
-  getAiSuggestion: async (scanId: string) => {
-    const { data } = await api.get<any>(`/prescriptions/ai-suggestion/${scanId}`);
-    return data;
-  },
 };
 
 // ─── Dashboard ───────────────────────────────────────────

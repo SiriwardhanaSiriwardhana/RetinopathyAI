@@ -10,49 +10,9 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.schemas.user import UserOut
 from app.schemas.prescription import PrescriptionCreate, PrescriptionOut
-from app.services.openai_service import get_prescription_suggestion
 
 router = APIRouter(prefix="/api/prescriptions", tags=["Prescriptions"])
 
-
-@router.get("/ai-suggestion/{scan_id}")
-def get_ai_prescription_suggestion(
-    scan_id: str,
-    db: firestore.Client = Depends(get_db),
-    current_user: UserOut = Depends(get_current_user),
-):
-    """
-    Generate an AI-powered prescription suggestion for a given scan.
-    Fetches the diagnosis + patient details, then calls OpenAI GPT-4o.
-    """
-    # Fetch diagnosis
-    diag_docs = list(
-        db.collection("diagnoses").where("scan_id", "==", scan_id).limit(1).stream()
-    )
-    if not diag_docs:
-        raise HTTPException(status_code=404, detail="Diagnosis not found for this scan")
-
-    diag_data = diag_docs[0].to_dict()
-
-    # Fetch patient details for richer context
-    patient_id = diag_data.get("patient_id", "")
-    patient_age = None
-    diabetes_type = None
-    if patient_id:
-        patient_doc = db.collection("patients").document(patient_id).get()
-        if patient_doc.exists:
-            p = patient_doc.to_dict()
-            patient_age = p.get("age")
-            diabetes_type = p.get("diabetes_type")
-
-    suggestion = get_prescription_suggestion(
-        dr_stage=diag_data.get("dr_stage", ""),
-        confidence=diag_data.get("confidence", 0.0),
-        details=diag_data.get("details", ""),
-        patient_age=patient_age,
-        diabetes_type=diabetes_type,
-    )
-    return suggestion
 
 
 @router.post("/", response_model=PrescriptionOut, status_code=status.HTTP_201_CREATED)

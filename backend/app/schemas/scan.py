@@ -4,6 +4,7 @@ Pydantic schemas for RetinalScan & Diagnosis response bodies.
 
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 
 class ScanOut(BaseModel):
@@ -21,6 +22,7 @@ class DiagnosisOut(BaseModel):
     dr_stage: str
     confidence: float
     details: str | None = None
+    heatmap_path: Optional[str] = None
     created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
@@ -31,3 +33,4 @@ class PredictionResult(BaseModel):
     dr_stage: str
     confidence: float
     details: str | None = None
+    heatmap_path: Optional[str] = None

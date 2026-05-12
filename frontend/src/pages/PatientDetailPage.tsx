@@ -8,18 +8,18 @@ import {
   Phone,
   Mail,
   Activity,
+  Clock,
+  Eye,
+  FileText,
 } from 'lucide-react';
-import type { Patient, RetinalScan, Diagnosis } from '../types';
+import type { Patient, RetinalScan } from '../types';
 import '../styles/patient-detail.css';
 
-// Mock data
 export default function PatientDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'scans' | 'diagnoses'>('scans');
   const [patient, setPatient] = useState<Patient | null>(null);
   const [scans, setScans] = useState<RetinalScan[]>([]);
-  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -39,17 +39,16 @@ export default function PatientDetailPage() {
     }
   }, [id]);
 
-  if (!patient) return <div className="patient-detail">Loading...</div>;
+  if (!patient) return (
+    <div className="patient-detail" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+      <p>Loading patient...</p>
+    </div>
+  );
 
-  const getSeverityColor = (stage: string) => {
-    const colors: Record<string, string> = {
-      'No DR': 'badge-success',
-      Mild: 'badge-info',
-      Moderate: 'badge-warning',
-      Severe: 'badge-error',
-      'Proliferative DR': 'badge-critical',
-    };
-    return colors[stage] || 'badge-default';
+  const getStatusBadge = (status: string) => {
+    if (status === 'analyzed') return 'badge-success';
+    if (status === 'failed') return 'badge-error';
+    return 'badge-warning';
   };
 
   return (
@@ -74,7 +73,7 @@ export default function PatientDetailPage() {
           </div>
           <button
             className="btn btn-primary"
-            onClick={() => navigate('/scan/upload')}
+            onClick={() => navigate('/scan/upload', { state: { patientId: id, patientName: patient.name } })}
           >
             <Upload size={18} />
             New Scan
@@ -97,30 +96,26 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'scans' ? 'active' : ''}`}
-          onClick={() => setActiveTab('scans')}
-        >
-          Retinal Scans ({scans.length})
-        </button>
-        <button
-          className={`tab ${activeTab === 'diagnoses' ? 'active' : ''}`}
-          onClick={() => setActiveTab('diagnoses')}
-        >
-          Diagnosis Reports ({diagnoses.length})
-        </button>
-      </div>
-
-      {/* Scans Tab */}
-      {activeTab === 'scans' && (
-        <div className="table-card">
+      {/* Scans Table */}
+      <div className="table-card">
+        {scans.length === 0 ? (
+          <div className="empty-state" style={{ padding: 40, textAlign: 'center' }}>
+            <Eye size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
+            <p style={{ color: '#9ca3af' }}>No scans uploaded yet</p>
+            <button
+              className="btn btn-primary"
+              style={{ marginTop: 12 }}
+              onClick={() => navigate('/scan/upload', { state: { patientId: id, patientName: patient.name } })}
+            >
+              <Upload size={16} /> Upload First Scan
+            </button>
+          </div>
+        ) : (
           <table className="data-table">
             <thead>
               <tr>
                 <th>Scan ID</th>
-                <th>Upload Date</th>
+                <th>Upload Date &amp; Time</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -128,92 +123,46 @@ export default function PatientDetailPage() {
             <tbody>
               {scans.map((scan) => (
                 <tr key={scan.imageId}>
-                  <td>#{scan.imageId.toString().slice(0, 8)}</td>
+                  <td style={{ fontFamily: 'monospace', fontSize: 13 }}>#{scan.imageId?.toString().slice(0, 8)}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Clock size={14} style={{ color: '#6b7280' }} />
                       {scan.uploadDate ? (
                         <span>
                           {new Date(scan.uploadDate).toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
+                            day: '2-digit', month: 'short', year: 'numeric',
                           })}
                           <span style={{ color: '#9ca3af', marginLeft: 8, fontSize: '0.85em' }}>
-                            {new Date(scan.uploadDate).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {new Date(scan.uploadDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </span>
-                      ) : (
-                        '—'
-                      )}
+                      ) : '—'}
                     </div>
                   </td>
                   <td>
-                    <span
-                      className={`badge ${
-                        scan.status === 'analyzed' ? 'badge-success' : 'badge-warning'
-                      }`}
-                    >
-                      {scan.status}
+                    <span className={`badge ${getStatusBadge(scan.status || '')}`}>
+                      {scan.status || 'pending'}
                     </span>
                   </td>
                   <td>
-                    <button
-                      className="btn btn-sm btn-outline"
-                      onClick={() => navigate(`/diagnosis/${scan.imageId}`)}
-                    >
-                      View Report
-                    </button>
+                    {scan.status === 'analyzed' ? (
+                      <button
+                        className="btn btn-sm btn-outline"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                        onClick={() => navigate(`/diagnosis/${scan.imageId}`)}
+                      >
+                        <FileText size={14} /> View Report
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: 12, color: '#9ca3af' }}>Pending analysis</span>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* Diagnoses Tab */}
-      {activeTab === 'diagnoses' && (
-        <div className="diagnoses-list">
-          {diagnoses.map((d) => (
-            <div key={d.reportId} className="diagnosis-card">
-              <div className="diagnosis-card-header">
-                <div>
-                  <span className={`badge ${getSeverityColor(d.drStage)}`}>
-                    {d.drStage}
-                  </span>
-                  <span className="confidence">
-                    Confidence: {(d.confidence * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <span className="diagnosis-date">
-                  {new Date(d.createdDate).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="diagnosis-findings">
-                <strong>Findings:</strong>
-                <ul>
-                  {d.findings.map((f, i) => (
-                    <li key={i}>{f}</li>
-                  ))}
-                </ul>
-              </div>
-              <p className="diagnosis-recommendations">
-                <strong>Recommendation:</strong> {d.recommendations}
-              </p>
-              <button
-                className="btn btn-sm btn-outline"
-                onClick={() => navigate(`/diagnosis/${d.reportId}`)}
-              >
-                Full Report
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

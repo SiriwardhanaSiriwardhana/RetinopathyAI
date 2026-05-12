@@ -11,6 +11,7 @@ export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<PatientFormData>({
     name: '',
     age: 0,
@@ -34,13 +35,32 @@ export default function PatientsPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const newPatient = await patientsAPI.create(formData);
-      setPatients([newPatient, ...patients]);
+      if (editingId) {
+        const updated = await patientsAPI.update(editingId, formData);
+        setPatients(patients.map((p) => p.id === editingId ? updated : p));
+      } else {
+        const newPatient = await patientsAPI.create(formData);
+        setPatients([newPatient, ...patients]);
+      }
       setShowModal(false);
+      setEditingId(null);
       setFormData({ name: '', age: 0, gender: 'Male', diabetesType: 'Type 2', phone: '', email: '' });
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleEdit = (patient: Patient) => {
+    setEditingId(patient.id as string);
+    setFormData({
+      name: patient.name,
+      age: patient.age,
+      gender: patient.gender,
+      diabetesType: patient.diabetesType,
+      phone: patient.phone,
+      email: patient.email,
+    });
+    setShowModal(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -119,7 +139,7 @@ export default function PatientsPage() {
                   >
                     <Eye size={16} />
                   </button>
-                  <button className="icon-btn" title="Edit">
+                  <button className="icon-btn" title="Edit" onClick={() => handleEdit(patient)}>
                     <Edit size={16} />
                   </button>
                   <button
@@ -146,7 +166,7 @@ export default function PatientsPage() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Add New Patient</h2>
+            <h2>{editingId ? 'Edit Patient' : 'Add New Patient'}</h2>
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
                 <div className="form-group">
@@ -211,11 +231,15 @@ export default function PatientsPage() {
                 </div>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>
+                <button type="button" className="btn btn-outline" onClick={() => {
+                  setShowModal(false);
+                  setEditingId(null);
+                  setFormData({ name: '', age: 0, gender: 'Male', diabetesType: 'Type 2', phone: '', email: '' });
+                }}>
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Add Patient
+                  {editingId ? 'Save Changes' : 'Add Patient'}
                 </button>
               </div>
             </form>

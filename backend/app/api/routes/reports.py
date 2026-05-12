@@ -90,11 +90,15 @@ async def generate_pdf_report(
     scan_doc = db.collection("scans").document(scan_id).get()
     scan_data = scan_doc.to_dict() if scan_doc.exists else {}
 
-    # Image URL
+    # Image URL — /uploads mount points to uploads/retinal_images/
+    # So /uploads/{filename} → uploads/retinal_images/{filename}
     image_path = scan_data.get("image_path", "")
     filename = Path(image_path).name
     base_url = str(request.base_url).rstrip("/")
     image_url = f"{base_url}/uploads/{filename}"
+
+    heatmap_path = diag_data.get("heatmap_path")
+    heatmap_url = f"{base_url}/uploads/heatmaps/{heatmap_path}" if heatmap_path else None
 
     colors = get_severity_colors(diag_data.get("dr_stage", ""))
     created_at = diag_data.get("created_at")
@@ -128,6 +132,7 @@ async def generate_pdf_report(
         severity_color=colors["text"],
         details=diag_data.get("details", "No details available."),
         image_url=image_url,
+        heatmap_url=heatmap_url,
         prescription=prescription,
     )
 

@@ -155,7 +155,7 @@ def run_prediction(
     scan_data = scan_doc.to_dict()
 
     try:
-        dr_stage, confidence, details = ml_service.predict(scan_data["image_path"])
+        dr_stage, confidence, details, heatmap_filename = ml_service.predict(scan_data["image_path"])
     except Exception as e:
         scan_ref.update({"status": "failed"})
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
@@ -175,6 +175,7 @@ def run_prediction(
         "confidence": confidence,
         "details": details,
         "ai_recommendation": ai_recommendation,
+        "heatmap_path": heatmap_filename,
         "created_at": datetime.now(timezone.utc)
     }
     diag_ref.set(diag_data)
@@ -184,6 +185,7 @@ def run_prediction(
         dr_stage=dr_stage,
         confidence=confidence,
         details=details,
+        heatmap_path=heatmap_filename,
     )
 
 @predict_router.get("/diagnosis/{report_id}", response_model=DiagnosisOut)

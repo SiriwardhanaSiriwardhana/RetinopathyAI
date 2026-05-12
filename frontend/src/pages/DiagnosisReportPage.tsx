@@ -14,7 +14,6 @@ import {
   Sparkles,
   FlaskConical,
   Wand2,
-  ClipboardCheck,
 } from 'lucide-react';
 import '../styles/diagnosis-report.css';
 
@@ -36,6 +35,7 @@ export default function DiagnosisReportPage() {
 
   const [diagnosis, setDiagnosis] = useState<any>(null);
   const [actualScan, setActualScan] = useState<any>(scan);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Prescription state
   const [doctorNotes, setDoctorNotes] = useState('');
@@ -43,11 +43,6 @@ export default function DiagnosisReportPage() {
   const [savedPrescription, setSavedPrescription] = useState<any>(null);
   const [savingRx, setSavingRx] = useState(false);
   const [rxSaved, setRxSaved] = useState(false);
-
-  // AI Suggestion state
-  const [aiSuggestion, setAiSuggestion] = useState<any>(null);
-  const [loadingSuggestion, setLoadingSuggestion] = useState(false);
-  const [suggestionApplied, setSuggestionApplied] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -71,11 +66,12 @@ export default function DiagnosisReportPage() {
             findings: data.details ? data.details.split('\n') : [],
             recommendations: 'Follow up according to clinical guidelines.',
             ai_recommendation: data.ai_recommendation || '',
+            heatmapPath: data.heatmap_path || null,
             createdDate: data.created_at || new Date().toISOString().split('T')[0],
           };
           setDiagnosis(diagObj);
 
-          // Load existing prescription
+          // Load existing prescription — 404 is expected when none exists yet
           prescriptionsAPI.getByDiagnosis(data.id)
             .then((presc) => {
               setSavedPrescription(presc);
@@ -83,24 +79,27 @@ export default function DiagnosisReportPage() {
               setMedicines(presc.medicines?.length > 0 ? presc.medicines : [emptyMed()]);
               setRxSaved(true);
             })
-            .catch(() => {
-              // No saved prescription — fetch AI suggestion automatically
-              setLoadingSuggestion(true);
-              prescriptionsAPI.getAiSuggestion(id!)
-                .then((suggestion) => {
-                  setAiSuggestion(suggestion);
-                })
-                .catch(console.error)
-                .finally(() => setLoadingSuggestion(false));
-            });
+            .catch(() => { /* No prescription yet — that's fine */ });
         })
-        .catch(console.error);
+        .catch((err) => {
+          console.error('Failed to load diagnosis:', err);
+          setFetchError('Could not load diagnosis report. Please try again.');
+        });
 
-      if (!actualScan) {
-        scansAPI.getById(id).then(setActualScan).catch(console.error);
-      }
+      // Always fetch scan fresh to guarantee we have the image path
+      scansAPI.getById(id).then(setActualScan).catch(console.error);
     }
   }, [id]);
+
+  if (fetchError) return (
+    <div className="diagnosis-report" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ textAlign: 'center' }}>
+        <AlertTriangle size={48} style={{ color: '#ef4444', marginBottom: 16 }} />
+        <p style={{ color: '#ef4444', fontWeight: 600 }}>{fetchError}</p>
+        <button className="btn btn-outline" style={{ marginTop: 16 }} onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    </div>
+  );
 
   if (!diagnosis) return (
     <div className="diagnosis-report" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
@@ -170,34 +169,6 @@ export default function DiagnosisReportPage() {
   };
   const addMed = () => { setMedicines((p) => [...p, emptyMed()]); setRxSaved(false); };
   const removeMed = (i: number) => { setMedicines((p) => p.filter((_, idx) => idx !== i)); setRxSaved(false); };
-
-  const applySuggestion = () => {
-    if (!aiSuggestion) return;
-    setDoctorNotes(aiSuggestion.doctor_notes || '');
-    setMedicines(
-      aiSuggestion.medicines?.length > 0
-        ? aiSuggestion.medicines.map((m: any) => ({
-            name: m.name || '',
-            dosage: m.dosage || '',
-            frequency: m.frequency || '',
-            duration: m.duration || '',
-            notes: m.notes || '',
-          }))
-        : [emptyMed()]
-    );
-    setSuggestionApplied(true);
-    setRxSaved(false);
-  };
-
-  const refreshSuggestion = () => {
-    if (!id) return;
-    setLoadingSuggestion(true);
-    setSuggestionApplied(false);
-    prescriptionsAPI.getAiSuggestion(id)
-      .then(setAiSuggestion)
-      .catch(console.error)
-      .finally(() => setLoadingSuggestion(false));
-  };
 
   const handleSavePrescription = async () => {
     if (!diagnosis?.id) return;
@@ -310,19 +281,52 @@ export default function DiagnosisReportPage() {
           </div>
 
           <div className="report-card scan-image-card">
-            <h3>Retinal Scan</h3>
-            {actualScan?.imagePath ? (
-              <img
-                src={`http://localhost:8000/uploads/${actualScan.imagePath.split(/[/\\]/).pop()}`}
-                alt="Retinal Scan"
-                style={{ width: '100%', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-              />
-            ) : (
-              <div className="scan-image-placeholder">
-                <Eye size={48} />
-                <p>Retinal fundus image</p>
+            <h3>Retinal Scan & Heatmap</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: diagnosis?.heatmapPath ? '1fr 1fr' : '1fr', gap: 16 }}>
+              <div>
+                <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 8, fontWeight: 500 }}>Original Scan</p>
+                {(() => {
+                // Handle both absolute Windows paths and simple filenames
+                const rawPath = actualScan?.imagePath || actualScan?.image_path || '';
+                const filename = rawPath ? rawPath.replace(/\\/g, '/').split('/').pop() : null;
+                return filename ? (
+                  <img
+                    src={`http://localhost:8000/uploads/${filename}`}
+                    alt="Retinal Scan"
+                    style={{ width: '100%', borderRadius: '8px', border: '1px solid #e5e7eb', display: 'block' }}
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.nextElementSibling?.setAttribute('style', 'display:flex');
+                    }}
+                  />
+                ) : null;
+              })()}
+              {(!actualScan?.imagePath && !actualScan?.image_path) && (
+                <div className="scan-image-placeholder">
+                  <Eye size={48} />
+                  <p>Retinal fundus image</p>
+                </div>
+              )}
               </div>
-            )}
+              {diagnosis?.heatmapPath && (
+                <div>
+                  <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 8, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Wand2 size={14} style={{ color: '#7c3aed' }} />
+                    Grad-CAM Heatmap
+                  </p>
+                  <img
+                    src={`http://localhost:8000/uploads/heatmaps/${diagnosis.heatmapPath}`}
+                    alt="Grad-CAM Heatmap"
+                    style={{ width: '100%', borderRadius: '8px', border: '2px solid #7c3aed' }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <p style={{ fontSize: 11, color: '#7c3aed', marginTop: 6, textAlign: 'center', fontStyle: 'italic' }}>
+                    Highlighted regions show where the AI focused to make this diagnosis
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -367,89 +371,6 @@ export default function DiagnosisReportPage() {
           </div>
         </div>
 
-        {/* ── AI PRESCRIPTION SUGGESTION ── */}
-        {(aiSuggestion || loadingSuggestion) && (
-          <div className="report-card" style={{
-            borderTop: '3px solid #7c3aed',
-            background: 'linear-gradient(135deg, #faf5ff 0%, #f0fdf4 100%)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#7c3aed', margin: 0 }}>
-                <Wand2 size={20} />
-                AI Prescription Suggestion
-                <span style={{ fontSize: 11, background: '#ede9fe', color: '#7c3aed', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
-                  GPT-4o
-                </span>
-              </h3>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={refreshSuggestion}
-                  disabled={loadingSuggestion}
-                  style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                >
-                  <Sparkles size={12} /> {loadingSuggestion ? 'Generating...' : 'Regenerate'}
-                </button>
-                {aiSuggestion && !suggestionApplied && (
-                  <button
-                    onClick={applySuggestion}
-                    style={{ fontSize: 12, padding: '4px 12px', borderRadius: 6, border: 'none', background: '#7c3aed', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}
-                  >
-                    <ClipboardCheck size={12} /> Apply to Prescription
-                  </button>
-                )}
-                {suggestionApplied && (
-                  <span style={{ fontSize: 12, background: '#ecfdf5', color: '#059669', padding: '4px 10px', borderRadius: 6, fontWeight: 600 }}>
-                    ✓ Applied
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {loadingSuggestion ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: '#7c3aed', fontSize: 14 }}>
-                <Wand2 size={24} style={{ animation: 'spin 1.5s linear infinite', marginBottom: 8, display: 'block', margin: '0 auto 8px' }} />
-                GPT-4o is generating a clinical prescription suggestion...
-              </div>
-            ) : aiSuggestion && (
-              <>
-                {aiSuggestion.doctor_notes && (
-                  <div style={{ marginTop: 14, padding: 14, background: '#fff', borderRadius: 8, border: '1px solid #e9d5ff', fontSize: 14, lineHeight: 1.7, color: '#374151' }}>
-                    <strong style={{ color: '#7c3aed', display: 'block', marginBottom: 4 }}>Suggested Notes:</strong>
-                    {aiSuggestion.doctor_notes}
-                  </div>
-                )}
-                {aiSuggestion.medicines?.length > 0 && (
-                  <div style={{ marginTop: 12, overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                      <thead>
-                        <tr style={{ background: '#7c3aed' }}>
-                          {['#', 'Medicine', 'Dosage', 'Frequency', 'Duration', 'Notes'].map((h) => (
-                            <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#fff' }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {aiSuggestion.medicines.map((med: any, i: number) => (
-                          <tr key={i} style={{ background: i % 2 === 0 ? '#faf5ff' : '#fff' }}>
-                            <td style={{ padding: '8px 10px', border: '1px solid #e9d5ff', color: '#7c3aed', fontWeight: 700 }}>{i + 1}</td>
-                            <td style={{ padding: '8px 10px', border: '1px solid #e9d5ff', fontWeight: 600 }}>{med.name}</td>
-                            <td style={{ padding: '8px 10px', border: '1px solid #e9d5ff' }}>{med.dosage}</td>
-                            <td style={{ padding: '8px 10px', border: '1px solid #e9d5ff' }}>{med.frequency}</td>
-                            <td style={{ padding: '8px 10px', border: '1px solid #e9d5ff' }}>{med.duration}</td>
-                            <td style={{ padding: '8px 10px', border: '1px solid #e9d5ff', color: '#6b7280' }}>{med.notes}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 10, fontStyle: 'italic' }}>
-                  ⚠ AI-generated suggestion. Always review and adjust before prescribing.
-                </p>
-              </>
-            )}
-          </div>
-        )}
 
         {/* ── PRESCRIPTION EDITOR ── */}
         <div className="report-card" style={{ borderTop: '3px solid #0891b2' }}>

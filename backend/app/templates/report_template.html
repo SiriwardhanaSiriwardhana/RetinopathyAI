@@ -470,16 +470,31 @@
         <div class="image-section">
 
             <div class="section-title">
-                Retinal Scan Image
+                Retinal Scan & Heatmap
             </div>
 
-            <div class="image-box">
+            <div class="image-box" style="{% if heatmap_url %}display: grid; grid-template-columns: 1fr 1fr; gap: 20px;{% endif %}">
+                
+                <div>
+                    <h4 style="margin-bottom: 10px; color: #475569; font-size: 14px; font-weight: 500;">Original Scan</h4>
+                    <img
+                        src="{{ image_url }}"
+                        alt="Retinal Scan"
+                        class="scan-image"
+                    />
+                </div>
 
-                <img
-                    src="{{ image_url }}"
-                    alt="Retinal Scan"
-                    class="scan-image"
-                />
+                {% if heatmap_url %}
+                <div>
+                    <h4 style="margin-bottom: 10px; color: #7c3aed; font-size: 14px; font-weight: 500;">Grad-CAM Heatmap</h4>
+                    <img
+                        src="{{ heatmap_url }}"
+                        alt="Grad-CAM Heatmap"
+                        class="scan-image"
+                        style="border-color: #7c3aed;"
+                    />
+                </div>
+                {% endif %}
 
             </div>
 

@@ -5,6 +5,14 @@ from PIL import Image, ImageFile
 from pathlib import Path
 import os
 import logging
+import uuid
+import numpy as np
+import cv2
+
+# Grad-CAM imports
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+from pytorch_grad_cam.utils.image import show_cam_on_image
 
 from app.core.config import settings
 
@@ -26,6 +34,14 @@ class DRModelService:
         """Initialize the model and transforms."""
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"ML Service using device: {self.device}")
+        
+        # Determine model path
+        self.model_path = Path(__file__).parent.parent / "ml" / "best_dr_model.pth"
+        
+        # Heatmaps directory
+        # Mount point /uploads maps to settings.UPLOAD_DIR
+        self.heatmap_dir = Path(settings.UPLOAD_DIR) / "heatmaps"
+        self.heatmap_dir.mkdir(parents=True, exist_ok=True)
         
         # Determine model path
         # Assuming model is placed in backend/app/ml/best_dr_model.pth
@@ -79,10 +95,10 @@ class DRModelService:
             return None
 
     def predict(self, image_path: str):
-        """Run inference on the provided image."""
+        """Run inference on the provided image and generate Grad-CAM heatmap."""
         if self.model is None:
             # Fallback placeholder if model didn't load
-            return "Unknown (Model missing)", 0.0, "Model file not found or failed to load."
+            return "Unknown (Model missing)", 0.0, "Model file not found or failed to load.", None
 
         try:
             # Open image
@@ -103,11 +119,43 @@ class DRModelService:
             dr_stage = self.class_names.get(pred_idx, f"Class {pred_idx}")
             details = f"Model predicted class {pred_idx} with {conf_val*100:.2f}% confidence."
             
-            return dr_stage, float(conf_val), details
+            # --- Grad-CAM Heatmap Generation ---
+            heatmap_filename = None
+            try:
+                # Target the last convolutional layer in ResNet50
+                target_layers = [self.model.layer4[-1]]
+                
+                # We need to enable gradients for Grad-CAM
+                # (The context manager `with torch.no_grad():` is closed above)
+                with GradCAM(model=self.model, target_layers=target_layers) as cam:
+                    targets = [ClassifierOutputTarget(pred_idx)]
+                    grayscale_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
+                    
+                    # Read original image for overlay
+                    rgb_img = cv2.imread(image_path, 1)[:, :, ::-1]
+                    rgb_img = np.float32(rgb_img) / 255
+                    rgb_img = cv2.resize(rgb_img, (224, 224))
+                    
+                    # Overlay CAM on image
+                    visualization = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
+                    
+                    # Save heatmap
+                    heatmap_filename = f"heatmap_{uuid.uuid4().hex}.jpg"
+                    heatmap_path = self.heatmap_dir / heatmap_filename
+                    
+                    # Convert RGB back to BGR for OpenCV saving
+                    cv2.imwrite(str(heatmap_path), visualization[:, :, ::-1])
+            except Exception as cam_err:
+                logger.error(f"Error generating Grad-CAM: {cam_err}")
+                with open(str(self.heatmap_dir / "gradcam_error.txt"), "w") as f:
+                    import traceback
+                    f.write(traceback.format_exc())
+            
+            return dr_stage, float(conf_val), details, heatmap_filename
             
         except Exception as e:
             logger.error(f"Error during prediction: {e}")
-            return "Error", 0.0, f"Failed to run prediction: {str(e)}"
+            return "Error", 0.0, f"Failed to run prediction: {str(e)}", None
 
 # Global instance
 ml_service = DRModelService()
