@@ -36,21 +36,29 @@ def get_scans(
         return []
         
     # Then get all scans for these patients
-    # Note: Firestore 'in' query supports up to 10 items, so we'll fetch all scans and filter,
-    # or query by patient individually if there are many. For simplicity here:
     scans = []
     scans_ref = db.collection("scans").stream()
     for doc in scans_ref:
         data = doc.to_dict()
         patient_id = data.get("patient_id")
         if patient_id in patient_map:
+            # Serialize Firestore Timestamp to ISO string
+            upload_date = data.get("upload_date", "")
+            if hasattr(upload_date, "isoformat"):
+                upload_date = upload_date.isoformat()
+            elif hasattr(upload_date, "timestamp"):
+                from datetime import datetime as _dt, timezone as _tz
+                upload_date = _dt.fromtimestamp(upload_date.timestamp(), tz=_tz.utc).isoformat()
+            else:
+                upload_date = str(upload_date) if upload_date else ""
+
             scans.append({
                 "id": doc.id,
                 "imageId": doc.id,
                 "patientId": patient_id,
                 "patientName": patient_map[patient_id],
                 "imagePath": data.get("image_path", ""),
-                "uploadDate": data.get("upload_date", ""),
+                "uploadDate": upload_date,
                 "status": data.get("status", "analyzed")
             })
     return scans
