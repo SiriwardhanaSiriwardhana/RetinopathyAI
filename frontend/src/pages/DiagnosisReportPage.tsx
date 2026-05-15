@@ -127,7 +127,7 @@ export default function DiagnosisReportPage() {
   const handleDownloadPDF = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/api/reports/${id}/pdf`, {
+      const response = await fetch(`/api/reports/${id}/pdf`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to generate PDF');
@@ -149,7 +149,7 @@ export default function DiagnosisReportPage() {
   const handleViewPDF = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/api/reports/${id}/pdf`, {
+      const response = await fetch(`/api/reports/${id}/pdf`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to generate PDF');
@@ -291,7 +291,7 @@ export default function DiagnosisReportPage() {
                 const filename = rawPath ? rawPath.replace(/\\/g, '/').split('/').pop() : null;
                 return filename ? (
                   <img
-                    src={`http://localhost:8000/uploads/${filename}`}
+                    src={`/uploads/${filename}`}
                     alt="Retinal Scan"
                     style={{ width: '100%', borderRadius: '8px', border: '1px solid #e5e7eb', display: 'block' }}
                     onError={(e) => {
@@ -316,7 +316,7 @@ export default function DiagnosisReportPage() {
                     Grad-CAM Heatmap
                   </p>
                   <img
-                    src={`http://localhost:8000/uploads/heatmaps/${diagnosis.heatmapPath}`}
+                    src={`/uploads/heatmaps/${diagnosis.heatmapPath}`}
                     alt="Grad-CAM Heatmap"
                     style={{ width: '100%', borderRadius: '8px', border: '2px solid #7c3aed' }}
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
