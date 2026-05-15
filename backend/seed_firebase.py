@@ -21,8 +21,8 @@ def seed_database():
     doctor_id = "test-doctor-123"
     doctor_ref = db.collection("users").document(doctor_id)
     doctor_ref.set({
-        "name": "Dr. Sarah Miller",
-        "email": "doctor@example.com",
+        "name": "Dr. Pubudu",
+        "email": "pubuduc03@gmail.com",
         "hashed_password": hash_password("password123"),
         "role": "doctor",
         "created_at": datetime.now(timezone.utc) - timedelta(days=30)
