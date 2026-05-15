@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./retinopathy.db"
 
     # ── Firebase ─────────────────────────────────────────
-    FIREBASE_CREDENTIALS: str = "firebase-service-account.json"
+    FIREBASE_CREDENTIALS: str = "new-01-96a1d-firebase-adminsdk-fbsvc-8315561b40.json"
 
     # ── JWT Auth ─────────────────────────────────────────
     SECRET_KEY: str = "change-me-in-production-use-a-strong-secret"
