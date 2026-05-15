@@ -1,0 +1,89 @@
+"""
+Prescription management routes — create & retrieve prescriptions stored in Firestore.
+"""
+
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, status
+from google.cloud import firestore
+
+from app.core.database import get_db
+from app.core.security import get_current_user
+from app.schemas.user import UserOut
+from app.schemas.prescription import PrescriptionCreate, PrescriptionOut
+
+router = APIRouter(prefix="/api/prescriptions", tags=["Prescriptions"])
+
+
+
+@router.post("/", response_model=PrescriptionOut, status_code=status.HTTP_201_CREATED)
+def create_or_update_prescription(
+    payload: PrescriptionCreate,
+    db: firestore.Client = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
+):
+    """Create or overwrite a prescription for a given diagnosis."""
+    # Verify the diagnosis exists and belongs to this doctor
+    docs = list(
+        db.collection("diagnoses")
+        .where("scan_id", "==", payload.scan_id)
+        .limit(1)
+        .stream()
+    )
+    if not docs:
+        raise HTTPException(status_code=404, detail="Diagnosis not found")
+
+    diag_data = docs[0].to_dict()
+    patient_id = diag_data.get("patient_id", "")
+
+    now = datetime.now(timezone.utc)
+
+    # Check if a prescription already exists for this diagnosis
+    existing = list(
+        db.collection("prescriptions")
+        .where("diagnosis_id", "==", payload.diagnosis_id)
+        .limit(1)
+        .stream()
+    )
+
+    prescription_data = {
+        "scan_id": payload.scan_id,
+        "diagnosis_id": payload.diagnosis_id,
+        "patient_id": patient_id,
+        "doctor_id": current_user.id,
+        "doctor_notes": payload.doctor_notes,
+        "medicines": [m.model_dump() for m in payload.medicines],
+        "updated_at": now,
+    }
+
+    if existing:
+        doc_ref = db.collection("prescriptions").document(existing[0].id)
+        doc_ref.update(prescription_data)
+        doc_id = existing[0].id
+        prescription_data["created_at"] = existing[0].to_dict().get("created_at")
+    else:
+        prescription_data["created_at"] = now
+        doc_ref = db.collection("prescriptions").document()
+        doc_ref.set(prescription_data)
+        doc_id = doc_ref.id
+
+    return PrescriptionOut(id=doc_id, **prescription_data)
+
+
+@router.get("/{diagnosis_id}", response_model=PrescriptionOut)
+def get_prescription(
+    diagnosis_id: str,
+    db: firestore.Client = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
+):
+    """Get the prescription for a given diagnosis ID."""
+    docs = list(
+        db.collection("prescriptions")
+        .where("diagnosis_id", "==", diagnosis_id)
+        .limit(1)
+        .stream()
+    )
+    if not docs:
+        raise HTTPException(status_code=404, detail="No prescription found for this diagnosis")
+
+    data = docs[0].to_dict()
+    return PrescriptionOut(id=docs[0].id, **data)

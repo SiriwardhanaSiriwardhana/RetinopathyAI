@@ -1,0 +1,29 @@
+"""
+Pydantic schemas for Patient request & response bodies.
+"""
+
+from pydantic import BaseModel
+from datetime import datetime
+
+
+class PatientCreate(BaseModel):
+    name: str
+    age: int
+    gender: str | None = None
+    diabetes_type: str | None = None
+    phone: str | None = None
+    email: str | None = None
+
+
+class PatientOut(BaseModel):
+    id: str
+    name: str
+    age: int
+    gender: str | None = None
+    diabetes_type: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    doctor_id: str
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}

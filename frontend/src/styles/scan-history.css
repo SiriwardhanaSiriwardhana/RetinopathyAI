@@ -1,0 +1,48 @@
+/* ─── Scan History Page ─── */
+.scan-history-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.filters-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.filters-row .search-bar {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.filter-group svg {
+  color: var(--text-muted);
+}
+
+.filter-group select {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .filters-row {
+    flex-direction: column;
+  }
+}
