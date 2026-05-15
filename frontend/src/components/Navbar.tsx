@@ -26,6 +26,11 @@ export default function Navbar() {
     navigate('/profile');
   };
 
+  const handleSettingsClick = () => {
+    setDropdownOpen(false);
+    navigate('/settings');
+  };
+
   const handleLogout = () => {
     setDropdownOpen(false);
     logout();
@@ -80,7 +85,7 @@ export default function Navbar() {
                 <UserCircle size={18} />
                 My Profile
               </button>
-              <button className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+              <button className="dropdown-item" onClick={handleSettingsClick}>
                 <Settings size={18} />
                 Settings
               </button>

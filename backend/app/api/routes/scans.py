@@ -61,6 +61,9 @@ def get_scans(
                 "uploadDate": upload_date,
                 "status": data.get("status", "analyzed")
             })
+
+    # Sort descending by uploadDate (newest first)
+    scans.sort(key=lambda s: s.get("uploadDate") or "", reverse=True)
     return scans
 
 

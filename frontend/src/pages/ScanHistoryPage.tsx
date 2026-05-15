@@ -8,15 +8,28 @@ import '../styles/scan-history.css';
 export default function ScanHistoryPage() {
   const [scans, setScans] = useState<RetinalScan[]>([]);
   useEffect(() => {
-    scansAPI.getAll().then(setScans).catch(console.error);
+    scansAPI.getAll()
+      .then((data) => {
+        // Sort descending by uploadDate
+        const sorted = [...data].sort((a, b) => {
+          const dateA = a.uploadDate ? new Date(a.uploadDate).getTime() : 0;
+          const dateB = b.uploadDate ? new Date(b.uploadDate).getTime() : 0;
+          return dateB - dateA;
+        });
+        setScans(sorted);
+      })
+      .catch(console.error);
   }, []);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const navigate = useNavigate();
 
   const filtered = scans.filter((s) => {
-    const matchSearch = s.patientName.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'all' || s.status === statusFilter;
+    const name = (s.patientName || '').toLowerCase();
+    const q = search.trim().toLowerCase();
+    const matchSearch = q === '' || name.includes(q);
+    const scanStatus = (s.status || '').toLowerCase();
+    const matchStatus = statusFilter === 'all' || scanStatus === statusFilter.toLowerCase();
     return matchSearch && matchStatus;
   });
 
