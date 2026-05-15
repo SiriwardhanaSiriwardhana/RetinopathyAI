@@ -1,4 +1,4 @@
-# RetinopathyAI 👁️🩺
+# RetinopathyAI 
 
 Welcome to **RetinopathyAI**! This project provides an AI-powered diagnostic interface for analyzing retinal scans and detecting Diabetic Retinopathy.
 
