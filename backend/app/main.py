@@ -30,7 +30,7 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
-    # ✨ CORS ✨
+    # CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
@@ -39,7 +39,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ✨ Register routers ✨
+    #  Register routers 
     app.include_router(auth_router)
     app.include_router(patients_router)
     app.include_router(scans_router)
@@ -48,12 +48,12 @@ def create_app() -> FastAPI:
     app.include_router(reports_router)
     app.include_router(prescriptions_router)
 
-    # ✨ Mount static files ✨
+    #  Mount static files 
     upload_path = Path(settings.UPLOAD_DIR)
     upload_path.mkdir(parents=True, exist_ok=True)
     app.mount("/uploads", StaticFiles(directory=str(upload_path)), name="uploads")
 
-    # ✨ Health check ✨
+    # Health check 
     @app.get("/", tags=["Health"])
     def health_check():
         return {

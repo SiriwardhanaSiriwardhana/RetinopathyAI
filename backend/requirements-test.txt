@@ -1,0 +1,33 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Test-only dependencies for RetinopathyAI backend
+# Install with:  pip install -r requirements-test.txt
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Core test framework
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+
+# HTTP testing
+httpx>=0.27.0          # used by FastAPI TestClient under the hood
+
+# Mocking / patching (stdlib unittest.mock is usually enough,
+# but pytest-mock gives a nicer fixture API)
+pytest-mock>=3.12.0
+
+# Pydantic / FastAPI (must match backend versions — CI installs the main deps too)
+fastapi[standard]>=0.134.0
+uvicorn[standard]>=0.41.0
+pydantic>=2.12.5
+pydantic-settings>=2.13.1
+
+# Auth / security
+python-jose[cryptography]>=3.5.0
+passlib[bcrypt]>=1.7.4
+bcrypt<4.1
+
+# Email validation (used in UserRegister schema)
+email-validator>=2.3.0
+
+# Lightweight stubs — avoids installing heavy GPU libraries in CI
+# (torch / torchvision / firebase-admin are mocked in conftest.py)

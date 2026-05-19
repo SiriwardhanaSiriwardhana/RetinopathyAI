@@ -1,0 +1,45 @@
+# ruff.toml — linter configuration for RetinopathyAI backend
+# Docs: https://docs.astral.sh/ruff/configuration/
+
+# Target the same Python version as pyproject.toml
+target-version = "py312"
+line-length = 100
+
+[lint]
+# Rule sets enabled
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+]
+
+ignore = [
+    "E501",   # line-too-long  (handled by formatter)
+    "B008",   # do-not-perform-function-calls-in-default-args (FastAPI Depends pattern)
+    "UP007",  # use X | Y instead of Optional[X] — allow old-style for clarity
+    "SIM108", # ternary operator — allow if/else for readability
+]
+
+# Files / directories to skip entirely
+exclude = [
+    ".venv",
+    "__pycache__",
+    "*.pth",
+    "migrations",
+    "app/ml",
+]
+
+[lint.isort]
+known-first-party = ["app"]
+
+[format]
+# Use double quotes to match existing codebase style
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
