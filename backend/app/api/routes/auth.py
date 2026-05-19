@@ -8,7 +8,7 @@ from google.cloud import firestore
 
 from app.core.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token, get_current_user
-from app.schemas.user import UserRegister, UserLogin, UserOut, Token, LoginResponse
+from app.schemas.user import UserRegister, UserLogin, UserOut, Token, LoginResponse, SettingsUpdate
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -28,7 +28,21 @@ def register(payload: UserRegister, db: firestore.Client = Depends(get_db)):
         "email": payload.email,
         "hashed_password": hash_password(payload.password),
         "role": payload.role,
-        "created_at": datetime.now(timezone.utc)
+        "created_at": datetime.now(timezone.utc),
+        "settings": {
+            "theme": "blue",
+            "display_mode": "light",
+            "font_size": "medium",
+            "language": "en",
+            "notif_email": True,
+            "notif_new_scan": True,
+            "notif_critical": True,
+            "notif_weekly": True,
+            "analytics_enabled": True,
+            "session_timeout": "30",
+            "date_format": "DD / MM / YYYY",
+            "time_format": "12-hour (AM / PM)"
+        }
     }
     doc_ref.set(user_data)
 
@@ -60,3 +74,20 @@ def login(payload: UserLogin, db: firestore.Client = Depends(get_db)):
 def get_me(current_user: UserOut = Depends(get_current_user)):
     """Return the currently authenticated user's profile."""
     return current_user
+
+
+@router.patch("/settings", response_model=UserOut)
+def update_settings(
+    payload: SettingsUpdate,
+    current_user: UserOut = Depends(get_current_user),
+    db: firestore.Client = Depends(get_db)
+):
+    """Update current user's settings."""
+    user_ref = db.collection("users").document(current_user.id)
+    user_ref.update({"settings": payload.settings.model_dump()})
+    
+    # Return updated user
+    updated_doc = user_ref.get()
+    user_data = updated_doc.to_dict()
+    user_data["id"] = updated_doc.id
+    return UserOut(**user_data)

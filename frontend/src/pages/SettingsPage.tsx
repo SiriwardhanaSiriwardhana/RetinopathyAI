@@ -12,76 +12,18 @@ import {
   Moon,
   Contrast,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 import '../styles/settings.css';
 
-// ─── Theme Definitions ─────────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────
 const COLOR_THEMES = [
-  {
-    id: 'blue',
-    name: 'Ocean Blue',
-    description: 'Classic professional look',
-    primary: '#3b82f6',
-    primaryDark: '#2563eb',
-    primaryLight: '#eff6ff',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-  },
-  {
-    id: 'violet',
-    name: 'Royal Violet',
-    description: 'Premium deep purple',
-    primary: '#7c3aed',
-    primaryDark: '#6d28d9',
-    primaryLight: '#f5f3ff',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-  },
-  {
-    id: 'emerald',
-    name: 'Emerald Green',
-    description: 'Fresh medical tone',
-    primary: '#059669',
-    primaryDark: '#047857',
-    primaryLight: '#ecfdf5',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-  },
-  {
-    id: 'rose',
-    name: 'Rose Red',
-    description: 'Bold & energetic',
-    primary: '#e11d48',
-    primaryDark: '#be123c',
-    primaryLight: '#fff1f2',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#dc2626',
-  },
-  {
-    id: 'amber',
-    name: 'Amber Gold',
-    description: 'Warm & inviting',
-    primary: '#d97706',
-    primaryDark: '#b45309',
-    primaryLight: '#fffbeb',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-  },
-  {
-    id: 'cyan',
-    name: 'Cyan Teal',
-    description: 'Cool & clinical',
-    primary: '#0891b2',
-    primaryDark: '#0e7490',
-    primaryLight: '#ecfeff',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-  },
+  { id: 'blue', name: 'Ocean Blue', description: 'Classic professional look', primary: '#3b82f6' },
+  { id: 'violet', name: 'Royal Violet', description: 'Premium deep purple', primary: '#7c3aed' },
+  { id: 'emerald', name: 'Emerald Green', description: 'Fresh medical tone', primary: '#059669' },
+  { id: 'rose', name: 'Rose Red', description: 'Bold & energetic', primary: '#e11d48' },
+  { id: 'amber', name: 'Amber Gold', description: 'Warm & inviting', primary: '#d97706' },
+  { id: 'cyan', name: 'Cyan Teal', description: 'Cool & clinical', primary: '#0891b2' },
 ];
 
 const DISPLAY_MODES = [
@@ -97,107 +39,53 @@ const LANGUAGES = [
   { code: 'ta', label: 'Tamil (தமிழ்)' },
 ];
 
-function applyTheme(themeId: string) {
-  const theme = COLOR_THEMES.find((t) => t.id === themeId);
-  if (!theme) return;
-  const root = document.documentElement;
-  root.style.setProperty('--primary', theme.primary);
-  root.style.setProperty('--primary-dark', theme.primaryDark);
-  root.style.setProperty('--primary-light', theme.primaryLight);
-  root.style.setProperty('--success', theme.success);
-  root.style.setProperty('--warning', theme.warning);
-  root.style.setProperty('--error', theme.error);
-  root.style.setProperty('--info', theme.primary);
-  root.style.setProperty('--info-bg', theme.primaryLight);
-}
-
-function applyDisplayMode(mode: string) {
-  const root = document.documentElement;
-  root.setAttribute('data-display-mode', mode);
-
-  if (mode === 'dark') {
-    root.style.setProperty('--bg', '#0f172a');
-    root.style.setProperty('--surface', '#1e293b');
-    root.style.setProperty('--border', '#334155');
-    root.style.setProperty('--border-light', '#1e293b');
-    root.style.setProperty('--text', '#f1f5f9');
-    root.style.setProperty('--text-secondary', '#94a3b8');
-    root.style.setProperty('--text-muted', '#64748b');
-  } else if (mode === 'high-contrast') {
-    root.style.setProperty('--bg', '#000000');
-    root.style.setProperty('--surface', '#111111');
-    root.style.setProperty('--border', '#ffffff');
-    root.style.setProperty('--border-light', '#333333');
-    root.style.setProperty('--text', '#ffffff');
-    root.style.setProperty('--text-secondary', '#e5e7eb');
-    root.style.setProperty('--text-muted', '#d1d5db');
-  } else {
-    // light or system → restore defaults
-    root.style.setProperty('--bg', '#f8fafc');
-    root.style.setProperty('--surface', '#ffffff');
-    root.style.setProperty('--border', '#e2e8f0');
-    root.style.setProperty('--border-light', '#f1f5f9');
-    root.style.setProperty('--text', '#1e293b');
-    root.style.setProperty('--text-secondary', '#64748b');
-    root.style.setProperty('--text-muted', '#94a3b8');
-  }
-}
-
 // ─── Component ─────────────────────────────────────────────────────────────
 export default function SettingsPage() {
+  const { user, updateSettings } = useAuth();
   const [activeTab, setActiveTab] = useState<'appearance' | 'notifications' | 'privacy' | 'regional'>('appearance');
-  const [selectedTheme, setSelectedTheme] = useState(() => localStorage.getItem('theme') || 'blue');
-  const [displayMode, setDisplayMode] = useState(() => localStorage.getItem('displayMode') || 'light');
-  const [fontSize, setFontSize] = useState(() => localStorage.getItem('fontSize') || 'medium');
-  const [language, setLanguage] = useState(() => localStorage.getItem('language') || 'en');
+  const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Notification prefs
-  const [notifEmail, setNotifEmail] = useState(() => localStorage.getItem('notifEmail') !== 'false');
-  const [notifNewScan, setNotifNewScan] = useState(() => localStorage.getItem('notifNewScan') !== 'false');
-  const [notifCritical, setNotifCritical] = useState(() => localStorage.getItem('notifCritical') !== 'false');
-  const [notifWeekly, setNotifWeekly] = useState(() => localStorage.getItem('notifWeekly') !== 'false');
+  // Local state for form management
+  const [settings, setSettings] = useState({
+    theme: 'blue',
+    display_mode: 'light',
+    font_size: 'medium',
+    language: 'en',
+    notif_email: true,
+    notif_new_scan: true,
+    notif_critical: true,
+    notif_weekly: true,
+    analytics_enabled: true,
+    session_timeout: '30',
+    date_format: 'DD / MM / YYYY',
+    time_format: '12-hour (AM / PM)',
+  });
 
-  // Privacy prefs
-  const [analyticsEnabled, setAnalyticsEnabled] = useState(() => localStorage.getItem('analytics') !== 'false');
-  const [sessionTimeout, setSessionTimeout] = useState(() => localStorage.getItem('sessionTimeout') || '30');
-
-  // Apply theme on mount
+  // Sync local state when user data arrives
   useEffect(() => {
-    applyTheme(selectedTheme);
-    applyDisplayMode(displayMode);
-  }, []);
+    if (user?.settings) {
+      setSettings(user.settings);
+    }
+  }, [user]);
 
-  const handleThemeSelect = (themeId: string) => {
-    setSelectedTheme(themeId);
-    applyTheme(themeId);
+  const handleUpdate = (field: string, value: any) => {
+    setSettings((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleDisplayModeSelect = (mode: string) => {
-    setDisplayMode(mode);
-    applyDisplayMode(mode);
-  };
-
-  const handleFontSize = (size: string) => {
-    setFontSize(size);
-    const map: Record<string, string> = { small: '13px', medium: '14px', large: '16px' };
-    document.documentElement.style.fontSize = map[size] || '14px';
-  };
-
-  const handleSave = () => {
-    localStorage.setItem('theme', selectedTheme);
-    localStorage.setItem('displayMode', displayMode);
-    localStorage.setItem('fontSize', fontSize);
-    localStorage.setItem('language', language);
-    localStorage.setItem('notifEmail', String(notifEmail));
-    localStorage.setItem('notifNewScan', String(notifNewScan));
-    localStorage.setItem('notifCritical', String(notifCritical));
-    localStorage.setItem('notifWeekly', String(notifWeekly));
-    localStorage.setItem('analytics', String(analyticsEnabled));
-    localStorage.setItem('sessionTimeout', sessionTimeout);
-
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateSettings(settings);
+      setSaved(true);
+      toast.success('Settings updated successfully');
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const tabs = [
@@ -209,20 +97,22 @@ export default function SettingsPage() {
 
   return (
     <div className="settings-page">
-      {/* Page Header */}
       <div className="page-header">
         <div>
           <h1>Settings</h1>
           <p>Customize your RetinopathyAI experience</p>
         </div>
-        <button className={`btn ${saved ? 'btn-success' : 'btn-primary'}`} onClick={handleSave}>
-          {saved ? <Check size={18} /> : <Save size={18} />}
-          {saved ? 'Saved!' : 'Save Changes'}
+        <button 
+          className={`btn ${saved ? 'btn-success' : 'btn-primary'}`} 
+          onClick={handleSave}
+          disabled={isSaving}
+        >
+          {saved ? <Check size={18} /> : (isSaving ? null : <Save size={18} />)}
+          {isSaving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
         </button>
       </div>
 
       <div className="settings-layout">
-        {/* Sidebar Tabs */}
         <aside className="settings-sidebar">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
@@ -237,9 +127,8 @@ export default function SettingsPage() {
           ))}
         </aside>
 
-        {/* Main Content */}
         <main className="settings-content">
-          {/* ── Appearance ── */}
+          {/* Appearance Section */}
           {activeTab === 'appearance' && (
             <div className="settings-section">
               <div className="settings-card">
@@ -247,22 +136,20 @@ export default function SettingsPage() {
                   <Palette size={20} />
                   <div>
                     <h3>Color Theme</h3>
-                    <p>Choose the accent color throughout the application</p>
+                    <p>Choose the accent color for the interface</p>
                   </div>
                 </div>
                 <div className="theme-grid">
-                  {COLOR_THEMES.map((theme) => (
+                  {COLOR_THEMES.map((t) => (
                     <button
-                      key={theme.id}
-                      className={`theme-swatch ${selectedTheme === theme.id ? 'selected' : ''}`}
-                      onClick={() => handleThemeSelect(theme.id)}
-                      style={{ '--swatch-color': theme.primary } as React.CSSProperties}
+                      key={t.id}
+                      className={`theme-swatch ${settings.theme === t.id ? 'selected' : ''}`}
+                      onClick={() => handleUpdate('theme', t.id)}
                     >
-                      <div className="swatch-circle" style={{ background: theme.primary }}>
-                        {selectedTheme === theme.id && <Check size={14} color="white" />}
+                      <div className="swatch-circle" style={{ background: t.primary }}>
+                        {settings.theme === t.id && <Check size={14} color="white" />}
                       </div>
-                      <span className="swatch-name">{theme.name}</span>
-                      <span className="swatch-desc">{theme.description}</span>
+                      <span className="swatch-name">{t.name}</span>
                     </button>
                   ))}
                 </div>
@@ -277,13 +164,13 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="mode-grid">
-                  {DISPLAY_MODES.map(({ id, label, icon: ModeIcon }) => (
+                  {DISPLAY_MODES.map(({ id, label, icon: Icon }) => (
                     <button
                       key={id}
-                      className={`mode-btn ${displayMode === id ? 'selected' : ''}`}
-                      onClick={() => handleDisplayModeSelect(id)}
+                      className={`mode-btn ${settings.display_mode === id ? 'selected' : ''}`}
+                      onClick={() => handleUpdate('display_mode', id)}
                     >
-                      <ModeIcon size={22} />
+                      <Icon size={22} />
                       <span>{label}</span>
                     </button>
                   ))}
@@ -295,15 +182,15 @@ export default function SettingsPage() {
                   <Monitor size={20} />
                   <div>
                     <h3>Font Size</h3>
-                    <p>Adjust the base font size for better readability</p>
+                    <p>Adjust the text scale for better readability</p>
                   </div>
                 </div>
                 <div className="font-size-row">
                   {(['small', 'medium', 'large'] as const).map((size) => (
                     <button
                       key={size}
-                      className={`font-size-btn ${fontSize === size ? 'selected' : ''}`}
-                      onClick={() => handleFontSize(size)}
+                      className={`font-size-btn ${settings.font_size === size ? 'selected' : ''}`}
+                      onClick={() => handleUpdate('font_size', size)}
                     >
                       <span style={{ fontSize: size === 'small' ? '12px' : size === 'large' ? '18px' : '14px' }}>Aa</span>
                       <span className="font-size-label">{size.charAt(0).toUpperCase() + size.slice(1)}</span>
@@ -314,7 +201,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ── Notifications ── */}
+          {/* Notifications Section */}
           {activeTab === 'notifications' && (
             <div className="settings-section">
               <div className="settings-card">
@@ -322,66 +209,64 @@ export default function SettingsPage() {
                   <Bell size={20} />
                   <div>
                     <h3>Notification Preferences</h3>
-                    <p>Control when and how you receive alerts</p>
+                    <p>Control which alerts you want to receive</p>
                   </div>
                 </div>
                 <div className="toggle-list">
                   <ToggleRow
                     label="Email Notifications"
-                    description="Receive updates via email"
-                    checked={notifEmail}
-                    onChange={setNotifEmail}
+                    description="Receive diagnosis updates via email"
+                    checked={settings.notif_email}
+                    onChange={(v) => handleUpdate('notif_email', v)}
                   />
                   <ToggleRow
                     label="New Scan Alerts"
                     description="Notify when a new scan is uploaded"
-                    checked={notifNewScan}
-                    onChange={setNotifNewScan}
+                    checked={settings.notif_new_scan}
+                    onChange={(v) => handleUpdate('notif_new_scan', v)}
                   />
                   <ToggleRow
                     label="Critical Case Alerts"
-                    description="Immediate alert for Severe NPDR or Proliferative DR"
-                    checked={notifCritical}
-                    onChange={setNotifCritical}
+                    description="Immediate alert for severe retinopathy findings"
+                    checked={settings.notif_critical}
+                    onChange={(v) => handleUpdate('notif_critical', v)}
                   />
                   <ToggleRow
-                    label="Weekly Summary Report"
-                    description="Receive a weekly digest of patient activity"
-                    checked={notifWeekly}
-                    onChange={setNotifWeekly}
+                    label="Weekly Summary"
+                    description="Receive a weekly report of all scans"
+                    checked={settings.notif_weekly}
+                    onChange={(v) => handleUpdate('notif_weekly', v)}
                   />
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── Privacy & Security ── */}
+          {/* Privacy Section */}
           {activeTab === 'privacy' && (
             <div className="settings-section">
               <div className="settings-card">
                 <div className="settings-card-header">
                   <Shield size={20} />
                   <div>
-                    <h3>Privacy Settings</h3>
-                    <p>Control your data and session security</p>
+                    <h3>Privacy & Security</h3>
+                    <p>Manage data sharing and session security</p>
                   </div>
                 </div>
                 <div className="toggle-list">
                   <ToggleRow
                     label="Usage Analytics"
-                    description="Help improve the app by sharing anonymized usage data"
-                    checked={analyticsEnabled}
-                    onChange={setAnalyticsEnabled}
+                    description="Share anonymous data to improve our AI models"
+                    checked={settings.analytics_enabled}
+                    onChange={(v) => handleUpdate('analytics_enabled', v)}
                   />
                 </div>
-
-                <div className="settings-field" style={{ marginTop: 20 }}>
-                  <label className="settings-label">Session Timeout</label>
-                  <p className="settings-hint">Auto-logout after inactivity</p>
+                <div className="settings-field" style={{ marginTop: '20px' }}>
+                  <label className="settings-label">Auto-logout Timeout</label>
                   <select
                     className="settings-select"
-                    value={sessionTimeout}
-                    onChange={(e) => setSessionTimeout(e.target.value)}
+                    value={settings.session_timeout}
+                    onChange={(e) => handleUpdate('session_timeout', e.target.value)}
                   >
                     <option value="15">15 minutes</option>
                     <option value="30">30 minutes</option>
@@ -401,10 +286,10 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <button className="btn btn-danger-outline">
+                  <button className="btn btn-danger-outline" onClick={() => toast.info("Data cleared (Demo)")}>
                     Clear All Cached Data
                   </button>
-                  <button className="btn btn-danger-outline">
+                  <button className="btn btn-danger-outline" onClick={() => toast.info("Data exported (Demo)")}>
                     Export My Data
                   </button>
                 </div>
@@ -412,7 +297,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ── Regional ── */}
+          {/* Regional Section */}
           {activeTab === 'regional' && (
             <div className="settings-section">
               <div className="settings-card">
@@ -427,11 +312,11 @@ export default function SettingsPage() {
                   {LANGUAGES.map((lang) => (
                     <button
                       key={lang.code}
-                      className={`lang-btn ${language === lang.code ? 'selected' : ''}`}
-                      onClick={() => setLanguage(lang.code)}
+                      className={`lang-btn ${settings.language === lang.code ? 'selected' : ''}`}
+                      onClick={() => handleUpdate('language', lang.code)}
                     >
                       <span>{lang.label}</span>
-                      {language === lang.code && <Check size={16} />}
+                      {settings.language === lang.code && <Check size={16} />}
                     </button>
                   ))}
                 </div>
@@ -441,21 +326,29 @@ export default function SettingsPage() {
                 <div className="settings-card-header">
                   <Globe size={20} />
                   <div>
-                    <h3>Date & Time Format</h3>
-                    <p>How dates are displayed across the app</p>
+                    <h3>Formats</h3>
+                    <p>Set how dates and times are displayed</p>
                   </div>
                 </div>
                 <div className="settings-field">
                   <label className="settings-label">Date Format</label>
-                  <select className="settings-select">
+                  <select
+                    className="settings-select"
+                    value={settings.date_format}
+                    onChange={(e) => handleUpdate('date_format', e.target.value)}
+                  >
                     <option>DD / MM / YYYY</option>
                     <option>MM / DD / YYYY</option>
                     <option>YYYY-MM-DD</option>
                   </select>
                 </div>
-                <div className="settings-field" style={{ marginTop: 16 }}>
+                <div className="settings-field" style={{ marginTop: '16px' }}>
                   <label className="settings-label">Time Format</label>
-                  <select className="settings-select">
+                  <select
+                    className="settings-select"
+                    value={settings.time_format}
+                    onChange={(e) => handleUpdate('time_format', e.target.value)}
+                  >
                     <option>12-hour (AM / PM)</option>
                     <option>24-hour</option>
                   </select>
@@ -469,17 +362,11 @@ export default function SettingsPage() {
   );
 }
 
-// ─── Toggle Row Helper ──────────────────────────────────────────────────────
-function ToggleRow({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
+function ToggleRow({ label, description, checked, onChange }: { 
+  label: string; 
+  description: string; 
+  checked: boolean; 
+  onChange: (v: boolean) => void 
 }) {
   return (
     <div className="toggle-row">
@@ -487,10 +374,9 @@ function ToggleRow({
         <span className="toggle-label">{label}</span>
         <span className="toggle-desc">{description}</span>
       </div>
-      <button
-        className={`toggle-switch ${checked ? 'on' : ''}`}
+      <button 
+        className={`toggle-switch ${checked ? 'on' : ''}`} 
         onClick={() => onChange(!checked)}
-        aria-label={label}
       >
         <span className="toggle-thumb" />
       </button>
