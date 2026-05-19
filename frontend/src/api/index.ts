@@ -3,6 +3,7 @@ import type {
   LoginCredentials,
   RegisterData,
   User,
+  UserSettings,
   Patient,
   PatientFormData,
   RetinalScan,
@@ -53,6 +54,11 @@ export const authAPI = {
 
   getMe: async () => {
     const { data } = await api.get<User>('/auth/me');
+    return data;
+  },
+
+  updateSettings: async (settings: UserSettings) => {
+    const { data } = await api.patch<User>('/auth/settings', { settings });
     return data;
   },
 };

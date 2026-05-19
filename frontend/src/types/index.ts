@@ -1,10 +1,26 @@
 // User types
+export interface UserSettings {
+  theme: string;
+  display_mode: string;
+  font_size: string;
+  language: string;
+  notif_email: boolean;
+  notif_new_scan: boolean;
+  notif_critical: boolean;
+  notif_weekly: boolean;
+  analytics_enabled: boolean;
+  session_timeout: string;
+  date_format: string;
+  time_format: string;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
   role: 'doctor' | 'admin' | 'staff';
   created_at?: string;
+  settings: UserSettings;
 }
 
 export interface LoginCredentials {
